@@ -1,0 +1,12 @@
+
+tabletop-rules-api/__pycache__/
+
+tabletop-rules-api/.DS_Store
+
+tabletop-rules-api/app/__pycache__/
+
+tabletop-rules-api/app/routes/__pycache__/
+
+tabletop-rules-api/app/services/__pycache__/
+
+tabletop-rules-api/rules_data/.DS_Store

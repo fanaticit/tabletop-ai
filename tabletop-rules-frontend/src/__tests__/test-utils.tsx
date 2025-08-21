@@ -10,10 +10,16 @@ const createTestQueryClient = () => new QueryClient({
     queries: {
       retry: false,
       cacheTime: 0,
+      staleTime: 0,
     },
     mutations: {
       retry: false,
     },
+  },
+  logger: {
+    log: () => {},
+    warn: () => {},
+    error: () => {},
   },
 });
 
@@ -63,4 +69,4 @@ export const mockGame = {
   updated_at: new Date().toISOString(),
 };
 
-export const mockToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInByZWZlcmVuY2VzIjp7InNlbGVjdGVkR2FtZUlkIjoiY2hlc3MiLCJ0aGVtZSI6ImxpZ2h0In19.mock-signature';
+export const mockToken = 'mock-jwt-token';

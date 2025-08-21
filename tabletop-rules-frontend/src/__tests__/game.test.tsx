@@ -2,11 +2,6 @@ import { render, screen, fireEvent, waitFor } from './test-utils';
 import { rest } from 'msw';
 import { server } from '../setupTests';
 import { GameSelector } from '../components/games/GameSelector';
-import { useGameStore } from '../stores/gameStore';
-import { mockGame } from './test-utils';
-
-// Mock the game store
-jest.mock('../stores/gameStore');
 
 const mockGames = [
   {
@@ -34,18 +29,10 @@ const mockGames = [
 
 describe('Game Selection', () => {
   beforeEach(() => {
-    // Reset the mock store before each test
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedGame: null,
-      availableGames: [],
-      isLoading: false,
-      selectGame: jest.fn(),
-      clearSelection: jest.fn(),
-      setGames: jest.fn(),
-      setLoading: jest.fn(),
-    });
-
-    // Mock successful games API response
+    // Reset server handlers before each test
+    server.resetHandlers();
+    
+    // Set up default successful response
     server.use(
       rest.get('/api/games', (req, res, ctx) => {
         return res(ctx.json({ games: mockGames }));
@@ -61,15 +48,12 @@ describe('Game Selection', () => {
     });
 
     test('displays loading skeleton while fetching games', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedGame: null,
-        availableGames: [],
-        isLoading: true,
-        selectGame: jest.fn(),
-        clearSelection: jest.fn(),
-        setGames: jest.fn(),
-        setLoading: jest.fn(),
-      });
+      // Delay the response to simulate loading
+      server.use(
+        rest.get('/api/games', (req, res, ctx) => {
+          return res(ctx.delay(1000), ctx.json({ games: mockGames }));
+        })
+      );
 
       render(<GameSelector />);
       
@@ -98,52 +82,23 @@ describe('Game Selection', () => {
       });
     });
 
-    test('calls selectGame when a game is clicked', async () => {
-      const mockSelectGame = jest.fn();
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedGame: null,
-        availableGames: mockGames,
-        isLoading: false,
-        selectGame: mockSelectGame,
-        clearSelection: jest.fn(),
-        setGames: jest.fn(),
-        setLoading: jest.fn(),
-      });
-
+    test('selects game when clicked', async () => {
       render(<GameSelector />);
       
+      // Wait for games to load
       await waitFor(() => {
-        const chessGame = screen.getByText('Chess');
-        fireEvent.click(chessGame);
-        
-        expect(mockSelectGame).toHaveBeenCalledWith(
-          expect.objectContaining({
-            id: 'chess',
-            name: 'Chess',
-          })
-        );
-      });
-    });
-
-    test('highlights selected game', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedGame: mockGames[0], // Chess is selected
-        availableGames: mockGames,
-        isLoading: false,
-        selectGame: jest.fn(),
-        clearSelection: jest.fn(),
-        setGames: jest.fn(),
-        setLoading: jest.fn(),
+        expect(screen.getByText('Chess')).toBeInTheDocument();
       });
 
-      render(<GameSelector />);
+      // Click on the Chess game card
+      const chessCard = screen.getByText('Chess').closest('div[role="button"], div');
+      fireEvent.click(chessCard!);
       
-      expect(screen.getByText('Currently Selected:')).toBeInTheDocument();
-      expect(screen.getByText('Chess')).toBeInTheDocument();
-      
-      // The selected game card should have different styling
-      const selectedButton = screen.getByRole('button', { name: /selected/i });
-      expect(selectedButton).toBeInTheDocument();
+      // Should show selected state
+      await waitFor(() => {
+        expect(screen.getByText('Currently Selected:')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /selected/i })).toBeInTheDocument();
+      });
     });
 
     test('handles API error gracefully', async () => {
@@ -179,8 +134,8 @@ describe('Game Selection', () => {
     test('filters games by category', async () => {
       render(<GameSelector />);
       
+      // Wait for games to load
       await waitFor(() => {
-        // Wait for games to load
         expect(screen.getByText('Chess')).toBeInTheDocument();
       });
 

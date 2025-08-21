@@ -1,9 +1,14 @@
 // jest-dom adds custom jest matchers for asserting on DOM nodes.
 import '@testing-library/jest-dom';
 
-// Mock server setup for API testing
-import { setupServer } from 'msw/node';
-import { rest } from 'msw';
+// Polyfills for Node.js environment
+import { TextEncoder, TextDecoder } from 'util';
+
+// Add TextEncoder/TextDecoder to global scope for MSW
+Object.assign(global, { TextDecoder, TextEncoder });
+
+// Mock fetch if not available
+import 'whatwg-fetch';
 
 // Mock local storage
 Object.defineProperty(window, 'localStorage', {
@@ -38,20 +43,52 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// Mock IntersectionObserver
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Now we can safely import MSW after polyfills are set up
+import { setupServer } from 'msw/node';
+import { rest } from 'msw';
+
 // Setup MSW server
 export const server = setupServer(
   // Default handlers
   rest.get('/api/games', (req, res, ctx) => {
-    return res(ctx.json({ games: [] }));
+    return res(ctx.json({ 
+      games: [
+        {
+          id: 'chess',
+          name: 'Chess',
+          description: 'Classic strategy board game',
+          category: 'Strategy',
+          rule_count: 5,
+        }
+      ] 
+    }));
   }),
   
   rest.post('/api/auth/login', (req, res, ctx) => {
-    return res(ctx.json({ access_token: 'mock-token', token_type: 'bearer' }));
+    return res(ctx.json({ 
+      access_token: 'mock-token', 
+      token_type: 'bearer',
+      user: { id: '1', username: 'testuser', email: 'test@example.com' }
+    }));
+  }),
+
+  rest.post('/api/auth/register', (req, res, ctx) => {
+    return res(ctx.json({ 
+      message: 'Registration successful',
+      user: { id: '2', username: 'newuser', email: 'new@example.com' }
+    }));
   })
 );
 
 // Start server before all tests
-beforeAll(() => server.listen());
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 
 // Reset handlers after each test
 afterEach(() => server.resetHandlers());

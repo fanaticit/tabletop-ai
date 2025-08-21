@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '../../stores/gameStore';
 
@@ -11,7 +11,7 @@ interface Game {
 }
 
 export const GameSelector: React.FC = () => {
-  const { selectedGame, selectGame, setGames } = useGameStore();
+  const { selectedGame, selectGame } = useGameStore();
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
   const { data: gamesData, isLoading, error } = useQuery({
@@ -27,12 +27,6 @@ export const GameSelector: React.FC = () => {
   });
 
   const games = gamesData?.games || [];
-
-  useEffect(() => {
-    if (games) {
-      setGames(games);
-    }
-  }, [games, setGames]);
 
   // Filter games by category
   const filteredGames = filterCategory 

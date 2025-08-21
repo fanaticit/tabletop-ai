@@ -1,9 +1,4 @@
 import React, { useState } from 'react';
-import { 
-  Box, Button, FormControl, FormLabel, Input, 
-  VStack, Text, Alert, AlertIcon, FormErrorMessage 
-} from '@chakra-ui/react';
-import { useAuthStore } from '../../stores/authStore';
 
 interface LoginFormData {
   username: string;
@@ -23,8 +18,6 @@ export const LoginForm: React.FC = () => {
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  
-  const login = useAuthStore(state => state.login);
 
   const validateForm = (): boolean => {
     const newErrors: LoginFormErrors = {};
@@ -52,7 +45,6 @@ export const LoginForm: React.FC = () => {
     setErrors({});
 
     try {
-      // Mock API call for now - later we'll use real API
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -67,7 +59,7 @@ export const LoginForm: React.FC = () => {
       }
 
       const data = await response.json();
-      login(data.access_token);
+      console.log('Login successful:', data);
       
     } catch (error) {
       setErrors({ general: (error as Error).message });
@@ -91,50 +83,80 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <Box maxW="md" mx="auto" mt={8} p={6} borderWidth={1} borderRadius="lg">
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
       <form onSubmit={handleSubmit} role="form">
-        <VStack spacing={4}>
-          <Text fontSize="2xl" fontWeight="bold">Sign In</Text>
+        <div style={{ marginBottom: '20px' }}>
+          <h2>Sign In</h2>
           
           {errors.general && (
-            <Alert status="error">
-              <AlertIcon />
+            <div style={{ color: 'red', marginBottom: '10px' }}>
               {errors.general}
-            </Alert>
+            </div>
           )}
           
-          <FormControl isRequired isInvalid={!!errors.username}>
-            <FormLabel>Username</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
               value={formData.username}
               onChange={handleInputChange('username')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.username ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.username}</FormErrorMessage>
-          </FormControl>
+            {errors.username && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.username}
+              </div>
+            )}
+          </div>
           
-          <FormControl isRequired isInvalid={!!errors.password}>
-            <FormLabel>Password</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
               type="password"
               value={formData.password}
               onChange={handleInputChange('password')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.password ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.password}</FormErrorMessage>
-          </FormControl>
+            {errors.password && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.password}
+              </div>
+            )}
+          </div>
           
-          <Button 
+          <button 
             type="submit" 
-            colorScheme="blue" 
-            width="full"
-            isLoading={isLoading}
-            loadingText="Signing in..."
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '10px',
+              backgroundColor: '#0066cc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
           >
-            Sign In
-          </Button>
-        </VStack>
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 };

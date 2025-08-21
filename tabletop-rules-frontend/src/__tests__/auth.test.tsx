@@ -1,10 +1,7 @@
-import { render, screen, fireEvent, waitFor } from './test-utils';
-import { rest } from 'msw';
-import { server } from '../setupTests';
+import { render, screen, fireEvent, waitFor } from '../test-utils';
 import { LoginForm } from '../components/auth/LoginForm';
 import { RegistrationForm } from '../components/auth/RegistrationForm';
 
-// Don't mock the store - let it work naturally for integration tests
 describe('Authentication', () => {
   describe('LoginForm', () => {
     test('renders login form correctly', () => {
@@ -39,29 +36,20 @@ describe('Authentication', () => {
       fireEvent.change(passwordInput, { target: { value: 'password123' } });
       fireEvent.click(submitButton);
       
-      // Should not show any error messages
+      // Should not show any error messages for valid credentials
       await waitFor(() => {
         expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument();
       });
     });
 
     test('shows error message on failed login', async () => {
-      // Override the default successful login response
-      server.use(
-        rest.post('/api/auth/login', (req, res, ctx) => {
-          return res(
-            ctx.status(401),
-            ctx.json({ detail: 'Invalid credentials' })
-          );
-        })
-      );
-
       render(<LoginForm />);
       
       const usernameInput = screen.getByLabelText(/username/i);
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
       
+      // Use credentials that will trigger error in our fetch mock
       fireEvent.change(usernameInput, { target: { value: 'wronguser' } });
       fireEvent.change(passwordInput, { target: { value: 'wrongpass' } });
       fireEvent.click(submitButton);

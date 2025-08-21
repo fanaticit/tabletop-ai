@@ -27,16 +27,13 @@
     "web-vitals": "^2.1.4",
     "zustand": "^4.4.7"
   },
-  "devDependencies": {
-    "msw": "^1.3.2",
-    "whatwg-fetch": "^3.6.19"
-  },
+  "devDependencies": {},
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --transformIgnorePatterns=\"node_modules/(?!(msw)/)\"",
-    "test:watch": "react-scripts test --watch --transformIgnorePatterns=\"node_modules/(?!(msw)/)\"",
-    "test:coverage": "react-scripts test --coverage --watchAll=false --transformIgnorePatterns=\"node_modules/(?!(msw)/)\"",
+    "test": "react-scripts test",
+    "test:watch": "react-scripts test --watch",
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -64,10 +61,6 @@
       "!src/index.tsx",
       "!src/serviceWorker.ts",
       "!src/reportWebVitals.ts"
-    ],
-    "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/setupTests.ts"
     ]
   },
   "proxy": "http://localhost:8000"

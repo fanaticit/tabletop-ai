@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from './test-utils';
+import { render, screen } from '../test-utils';
 import { ChatInterface } from '../components/chat/ChatInterface';
 import { MessageInput } from '../components/chat/MessageInput';
 import { MessageList } from '../components/chat/MessageList';

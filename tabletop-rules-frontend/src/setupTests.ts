@@ -1,14 +1,8 @@
 // jest-dom adds custom jest matchers for asserting on DOM nodes.
 import '@testing-library/jest-dom';
 
-// Polyfills for Node.js environment
-import { TextEncoder, TextDecoder } from 'util';
-
-// Add TextEncoder/TextDecoder to global scope for MSW
-Object.assign(global, { TextDecoder, TextEncoder });
-
-// Mock fetch if not available
-import 'whatwg-fetch';
+// Mock fetch for our tests
+global.fetch = jest.fn();
 
 // Mock local storage
 Object.defineProperty(window, 'localStorage', {
@@ -28,8 +22,8 @@ Object.defineProperty(window, 'matchMedia', {
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
+    addListener: jest.fn(),
+    removeListener: jest.fn(), 
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
@@ -43,55 +37,83 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
-// Mock IntersectionObserver
+// Mock IntersectionObserver  
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }));
 
-// Now we can safely import MSW after polyfills are set up
-import { setupServer } from 'msw/node';
-import { rest } from 'msw';
-
-// Setup MSW server
-export const server = setupServer(
-  // Default handlers
-  rest.get('/api/games', (req, res, ctx) => {
-    return res(ctx.json({ 
-      games: [
-        {
-          id: 'chess',
-          name: 'Chess',
-          description: 'Classic strategy board game',
-          category: 'Strategy',
-          rule_count: 5,
-        }
-      ] 
-    }));
-  }),
+// Setup mock responses for our API endpoints
+beforeEach(() => {
+  // Reset all mocks before each test
+  jest.clearAllMocks();
   
-  rest.post('/api/auth/login', (req, res, ctx) => {
-    return res(ctx.json({ 
-      access_token: 'mock-token', 
-      token_type: 'bearer',
-      user: { id: '1', username: 'testuser', email: 'test@example.com' }
-    }));
-  }),
-
-  rest.post('/api/auth/register', (req, res, ctx) => {
-    return res(ctx.json({ 
-      message: 'Registration successful',
-      user: { id: '2', username: 'newuser', email: 'new@example.com' }
-    }));
-  })
-);
-
-// Start server before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-
-// Reset handlers after each test
-afterEach(() => server.resetHandlers());
-
-// Clean up after all tests
-afterAll(() => server.close());
+  // Setup default fetch mock responses
+  (global.fetch as jest.Mock).mockImplementation((url: string, options?: any) => {
+    // Mock login endpoint
+    if (url.includes('/api/auth/login')) {
+      if (options?.body?.includes('wronguser')) {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve({ detail: 'Invalid credentials' }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ 
+          access_token: 'mock-token',
+          token_type: 'bearer',
+          user: { id: '1', username: 'testuser', email: 'test@example.com' }
+        }),
+      });
+    }
+    
+    // Mock register endpoint
+    if (url.includes('/api/auth/register')) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ 
+          message: 'Registration successful',
+          user: { id: '2', username: 'newuser', email: 'new@example.com' }
+        }),
+      });
+    }
+    
+    // Mock games endpoint
+    if (url.includes('/api/games')) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ 
+          games: [
+            {
+              id: 'chess',
+              name: 'Chess',
+              description: 'Classic strategy board game',
+              category: 'Strategy',
+              rule_count: 5,
+            },
+            {
+              id: 'monopoly', 
+              name: 'Monopoly',
+              description: 'Real estate trading game',
+              category: 'Economic',
+              rule_count: 12,
+            }
+          ]
+        }),
+      });
+    }
+    
+    // Default response for unknown endpoints
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+    });
+  });
+});

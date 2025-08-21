@@ -1,8 +1,4 @@
 import React, { useState } from 'react';
-import { 
-  Box, Button, FormControl, FormLabel, Input, 
-  VStack, Text, Alert, AlertIcon, FormErrorMessage 
-} from '@chakra-ui/react';
 
 interface RegistrationFormData {
   username: string;
@@ -121,79 +117,132 @@ export const RegistrationForm: React.FC = () => {
   };
 
   return (
-    <Box maxW="md" mx="auto" mt={8} p={6} borderWidth={1} borderRadius="lg">
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
       <form onSubmit={handleSubmit} role="form">
-        <VStack spacing={4}>
-          <Text fontSize="2xl" fontWeight="bold">Create Account</Text>
+        <div style={{ marginBottom: '20px' }}>
+          <h2>Create Account</h2>
           
           {errors.general && (
-            <Alert status="error">
-              <AlertIcon />
+            <div style={{ color: 'red', marginBottom: '10px' }}>
               {errors.general}
-            </Alert>
+            </div>
           )}
           
           {successMessage && (
-            <Alert status="success">
-              <AlertIcon />
+            <div style={{ color: 'green', marginBottom: '10px' }}>
               {successMessage}
-            </Alert>
+            </div>
           )}
           
-          <FormControl isRequired isInvalid={!!errors.username}>
-            <FormLabel>Username</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
               value={formData.username}
               onChange={handleInputChange('username')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.username ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.username}</FormErrorMessage>
-          </FormControl>
+            {errors.username && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.username}
+              </div>
+            )}
+          </div>
           
-          <FormControl isRequired isInvalid={!!errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
               type="email"
               value={formData.email}
               onChange={handleInputChange('email')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.email ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.email}</FormErrorMessage>
-          </FormControl>
+            {errors.email && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.email}
+              </div>
+            )}
+          </div>
           
-          <FormControl isRequired isInvalid={!!errors.password}>
-            <FormLabel>Password</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
               type="password"
               value={formData.password}
               onChange={handleInputChange('password')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.password ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.password}</FormErrorMessage>
-          </FormControl>
+            {errors.password && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.password}
+              </div>
+            )}
+          </div>
           
-          <FormControl isRequired isInvalid={!!errors.confirmPassword}>
-            <FormLabel>Confirm Password</FormLabel>
-            <Input
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="confirmPassword">Confirm Password</label>
+            <input
+              id="confirmPassword"
               type="password"
               value={formData.confirmPassword}
               onChange={handleInputChange('confirmPassword')}
               disabled={isLoading}
+              required
+              style={{ 
+                width: '100%', 
+                padding: '8px', 
+                marginTop: '5px',
+                border: errors.confirmPassword ? '1px solid red' : '1px solid #ccc'
+              }}
             />
-            <FormErrorMessage>{errors.confirmPassword}</FormErrorMessage>
-          </FormControl>
+            {errors.confirmPassword && (
+              <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+                {errors.confirmPassword}
+              </div>
+            )}
+          </div>
           
-          <Button 
+          <button 
             type="submit" 
-            colorScheme="blue" 
-            width="full"
-            isLoading={isLoading}
-            loadingText="Creating account..."
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '10px',
+              backgroundColor: '#0066cc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
           >
-            Create Account
-          </Button>
-        </VStack>
+            {isLoading ? 'Creating account...' : 'Create Account'}
+          </button>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 };

@@ -1,0 +1,24 @@
+# Essential packages for basic functionality
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+motor==3.6.0
+pymongo==4.10.1
+python-dotenv==1.1.1
+pydantic==2.9.0
+pydantic-settings==2.5.2
+
+# For CORS in development
+python-multipart==0.0.6
+
+# Basic HTTP client
+httpx==0.28.1
+
+# Authentication dependencies (fixed versions)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# AI and Markdown processing (updated OpenAI)
+openai==1.99.9
+python-frontmatter==1.0.0
+markdown==3.5.1

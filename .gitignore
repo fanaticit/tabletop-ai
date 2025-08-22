@@ -10,3 +10,5 @@ tabletop-rules-api/app/routes/__pycache__/
 tabletop-rules-api/app/services/__pycache__/
 
 tabletop-rules-api/rules_data/.DS_Store
+
+.DS_Store

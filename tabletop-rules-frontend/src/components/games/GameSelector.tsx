@@ -33,8 +33,8 @@ export const GameSelector: React.FC = () => {
     ? games.filter((game: Game) => game.category.toLowerCase() === filterCategory.toLowerCase())
     : games;
 
-  // Get unique categories
-  const categories = [...new Set(games.map((game: Game) => game.category))];
+  // Get unique categories with proper typing
+  const categories: string[] = Array.from(new Set(games.map((game: Game) => game.category)));
 
   if (error) {
     return (
@@ -110,7 +110,7 @@ export const GameSelector: React.FC = () => {
             >
               All
             </button>
-            {categories.map((category) => (
+            {categories.map((category: string) => (
               <button
                 key={category}
                 onClick={() => setFilterCategory(category)}

@@ -1,4 +1,4 @@
-# main.py - Truly minimal working version (no routes yet)
+# main.py - Proper version with correct imports
 import os
 from dotenv import load_dotenv
 
@@ -8,25 +8,28 @@ load_dotenv()
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import asyncio
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import datetime
+from passlib.context import CryptContext
 
-# Import routes and auth
-from app.database import connect_to_mongo, close_mongo_connection
+# Import database and config
+from app.database import connect_to_mongo, close_mongo_connection, get_database
 from app.config import settings
-from app.routes import games, admin, chat
-from app.services.auth_service import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, verify_token
+
+# Import auth service functions
+from app.services.auth_service import create_access_token, verify_token, get_current_user
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
-    print("Basic API ready")
+    print("✅ Connected to MongoDB")
+    print("✅ Tabletop Rules API ready")
     yield
     # Shutdown
     await close_mongo_connection()
-    print("Disconnected from MongoDB")
+    print("❌ Disconnected from MongoDB")
 
 app = FastAPI(
     title="Tabletop Game Rules API",
@@ -44,37 +47,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database connection
-client = None
-database = None
-
-@app.on_event("startup")
-async def startup_db_client():
-    global client, database
-    client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
-    database = client[os.getenv("DATABASE_NAME", "tabletop_rules")]
-
-@app.on_event("shutdown") 
-async def shutdown_db_client():
-    if client:
-        client.close()
-
-async def get_database() -> AsyncIOMotorDatabase:
-    return database
-
 # Authentication setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """Get current user from JWT token."""
-    try:
-        payload = verify_token(token)
-        username = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return {"username": username}
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Auth endpoints
 @app.post("/token")
@@ -98,11 +73,6 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.post("/api/auth/register")
 async def register_user(user_data: dict, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Register a new user."""
-    from passlib.context import CryptContext
-    from datetime import datetime
-    
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    
     try:
         # Validate required fields
         required_fields = ["username", "email", "password"]
@@ -164,10 +134,6 @@ async def register_user(user_data: dict, db: AsyncIOMotorDatabase = Depends(get_
 @app.post("/api/auth/login")
 async def login_user(login_data: dict, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Login user with username/password."""
-    from passlib.context import CryptContext
-    
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    
     try:
         username = login_data.get("username")
         password = login_data.get("password")
@@ -199,29 +165,38 @@ async def login_user(login_data: dict, db: AsyncIOMotorDatabase = Depends(get_da
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
-# Include routers
-app.include_router(games.router, prefix="/api/games", tags=["games"])
-app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
-app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+# Include routers - Import them here to avoid circular imports
+from app.routes import games, admin, chat
+
+app.include_router(games.router)
+app.include_router(admin.router) 
+app.include_router(chat.router)
 
 # Health check
 @app.get("/")
 async def root():
     return {
         "message": "Tabletop Game Rules API is running!",
-        "status": "minimal_version",
+        "status": "ready",
         "database_configured": bool(settings.mongodb_uri and "your-username" not in settings.mongodb_uri),
-        "next_steps": [
-            "Add your .env file with MongoDB URI and OpenAI API key",
-            "Test this endpoint to verify basic functionality"
-        ]
+        "endpoints": {
+            "health": "/health",
+            "docs": "/docs",
+            "games": "/api/games/",
+            "auth": {
+                "login": "/api/auth/login",
+                "register": "/api/auth/register",
+                "token": "/token"
+            }
+        }
     }
 
 @app.get("/health")
 async def health_check():
     try:
-        # Test database connection
-        await database.command("ping")
+        # Test database connection using the proper get_database dependency
+        db = await get_database()
+        await db.command("ping")
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
@@ -230,7 +205,7 @@ async def health_check():
 @app.get("/test")
 async def test_endpoint():
     return {
-        "message": "Basic FastAPI is working!",
+        "message": "FastAPI is working!",
         "settings": {
             "database_name": settings.database_name,
             "environment": settings.environment,

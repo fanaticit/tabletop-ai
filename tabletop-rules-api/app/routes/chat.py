@@ -1,142 +1,179 @@
-# app/routes/chat.py - Fixed chat routes with regex search
-from fastapi import APIRouter, HTTPException
-from app.models import ChatRequest, ChatResponse
+# app/routes/chat.py - Fixed version
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.database import get_database
+from pydantic import BaseModel
+from typing import List, Optional
 import re
 
-router = APIRouter()
+router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-@router.post("/query", response_model=ChatResponse)
-async def query_rules(request: ChatRequest):
-    """Query game rules using regex search (no index required)"""
+class ChatQuery(BaseModel):
+    query: str
+    game_system: str
+    conversation_id: Optional[str] = None
+
+@router.post("/query")
+async def query_rules(
+    chat_query: ChatQuery,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Query game rules using natural language."""
     try:
-        db = get_database()
-        if db is None:
-            raise HTTPException(status_code=503, detail="Database not connected")
+        # Basic text search for now (no AI until OpenAI issues are resolved)
+        query_text = chat_query.query.lower()
+        game_id = chat_query.game_system.lower()
         
-        collection = db["content_chunks"]
+        # Create search regex pattern
+        search_terms = query_text.split()
+        search_pattern = "|".join([re.escape(term) for term in search_terms])
         
-        # Use regex search instead of text search (no index required)
-        search_pattern = re.escape(request.query.lower())
-        
-        search_results = []
-        async for rule in collection.find({
-            "game_id": request.game_system,
+        # Search for relevant rules
+        rules = await db.content_chunks.find({
+            "game_id": game_id,
             "$or": [
-                {"content": {"$regex": search_pattern, "$options": "i"}},
-                {"title": {"$regex": search_pattern, "$options": "i"}}
+                {"title": {"$regex": search_pattern, "$options": "i"}},
+                {"content": {"$regex": search_pattern, "$options": "i"}}
             ]
-        }).limit(5):
-            if "_id" in rule:
-                del rule["_id"]
-            if "rule_embedding" in rule:
-                del rule["rule_embedding"]  # Remove large embedding data
-            search_results.append(rule)
+        }).limit(5).to_list(length=5)
         
-        # Generate response
-        if search_results:
-            response_text = f"I found {len(search_results)} relevant rules for '{request.query}' in {request.game_system}:\n\n"
-            
-            for i, rule in enumerate(search_results, 1):
-                response_text += f"**{i}. {rule['title']}**\n"
-                
-                # Show relevant content snippet
-                content = rule['content']
-                query_lower = request.query.lower()
-                
-                # Find the query in the content for context
-                content_lower = content.lower()
-                if query_lower in content_lower:
-                    start_idx = content_lower.find(query_lower)
-                    start = max(0, start_idx - 50)
-                    end = min(len(content), start_idx + len(request.query) + 100)
-                    snippet = content[start:end].strip()
-                    if start > 0:
-                        snippet = "..." + snippet
-                    if end < len(content):
-                        snippet = snippet + "..."
-                    response_text += f"{snippet}\n\n"
-                else:
-                    # If query not found, show first part of content
-                    response_text += f"{content[:150]}...\n\n"
-                    
-        else:
-            response_text = f"I couldn't find any rules about '{request.query}' in {request.game_system}. Try different keywords or check if the game has been uploaded."
+        if not rules:
+            return {
+                "query": chat_query.query,
+                "game_system": game_id,
+                "response": f"I couldn't find specific rules about '{chat_query.query}' in {game_id}. Try rephrasing your question or check if the game has been uploaded.",
+                "rules_found": [],
+                "search_method": "text_regex"
+            }
         
-        return ChatResponse(
-            response=response_text,
-            sources=search_results,
-            confidence_score=0.8 if search_results else 0.1
-        )
+        # Format response
+        response_parts = [f"Here's what I found about '{chat_query.query}' in {game_id}:"]
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
-
-@router.get("/games/{game_id}/rules")
-async def get_game_rules(game_id: str, limit: int = 10):
-    """Get all rules for a specific game"""
-    try:
-        db = get_database()
-        if db is None:
-            raise HTTPException(status_code=503, detail="Database not connected")
-        
-        collection = db["content_chunks"]
-        
-        rules = []
-        async for rule in collection.find({"game_id": game_id}).limit(limit):
-            if "_id" in rule:
-                del rule["_id"]
-            if "rule_embedding" in rule:
-                del rule["rule_embedding"]  # Remove large embedding data
-            rules.append(rule)
+        for i, rule in enumerate(rules, 1):
+            content_preview = rule["content"][:200] + "..." if len(rule["content"]) > 200 else rule["content"]
+            response_parts.append(f"\n{i}. **{rule['title']}**\n{content_preview}")
         
         return {
-            "game_id": game_id,
-            "rules": rules,
-            "total_found": len(rules),
-            "message": f"Found {len(rules)} rules for {game_id}"
+            "query": chat_query.query,
+            "game_system": game_id,
+            "response": "\n".join(response_parts),
+            "rules_found": [
+                {
+                    "title": rule["title"],
+                    "content": rule["content"],
+                    "category": rule.get("category_id", "general")
+                }
+                for rule in rules
+            ],
+            "search_method": "text_regex",
+            "note": "AI semantic search not available yet - using text matching"
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving rules: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
 @router.get("/search/{game_id}")
-async def search_rules_by_keyword(game_id: str, q: str, limit: int = 5):
-    """Search rules by keyword (simple endpoint for testing)"""
+async def keyword_search(
+    game_id: str,
+    q: str = Query(..., description="Search query"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Simple keyword search for rules."""
     try:
-        db = get_database()
-        if db is None:
-            raise HTTPException(status_code=503, detail="Database not connected")
-        
-        collection = db["content_chunks"]
-        
-        # Simple regex search
+        # Create search pattern
         search_pattern = re.escape(q.lower())
         
-        rules = []
-        async for rule in collection.find({
+        # Search for rules
+        rules = await db.content_chunks.find({
             "game_id": game_id,
             "$or": [
-                {"content": {"$regex": search_pattern, "$options": "i"}},
-                {"title": {"$regex": search_pattern, "$options": "i"}}
+                {"title": {"$regex": search_pattern, "$options": "i"}},
+                {"content": {"$regex": search_pattern, "$options": "i"}}
             ]
-        }).limit(limit):
-            if "_id" in rule:
-                del rule["_id"]
-            if "rule_embedding" in rule:
-                del rule["rule_embedding"]
-            rules.append({
-                "title": rule["title"],
-                "content_preview": rule["content"][:200] + "..." if len(rule["content"]) > 200 else rule["content"],
-                "category_id": rule.get("category_id", "unknown")
-            })
+        }).limit(10).to_list(length=10)
         
         return {
-            "query": q,
             "game_id": game_id,
-            "results": rules,
+            "query": q,
+            "results": [
+                {
+                    "title": rule["title"],
+                    "content_preview": rule["content"][:150] + ("..." if len(rule["content"]) > 150 else ""),
+                    "category": rule.get("category_id", "general")
+                }
+                for rule in rules
+            ],
             "total_found": len(rules)
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error searching rules: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@router.get("/games/{game_id}/rules")
+async def get_all_game_rules(
+    game_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    limit: int = Query(50, le=100),
+    skip: int = Query(0, ge=0)
+):
+    """Get all rules for a specific game."""
+    try:
+        # Get rules with pagination
+        rules = await db.content_chunks.find({
+            "game_id": game_id
+        }).skip(skip).limit(limit).to_list(length=limit)
+        
+        # Get total count
+        total_count = await db.content_chunks.count_documents({"game_id": game_id})
+        
+        return {
+            "game_id": game_id,
+            "rules": [
+                {
+                    "title": rule["title"],
+                    "content": rule["content"],
+                    "category": rule.get("category_id", "general"),
+                    "created_at": rule.get("created_at")
+                }
+                for rule in rules
+            ],
+            "pagination": {
+                "skip": skip,
+                "limit": limit,
+                "total": total_count,
+                "has_more": skip + limit < total_count
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch rules: {str(e)}")
+
+@router.get("/games/{game_id}/categories")
+async def get_game_categories(
+    game_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get all categories for a specific game."""
+    try:
+        categories = await db.content_chunks.distinct("category_id", {"game_id": game_id})
+        
+        # Get rule count per category
+        category_stats = []
+        for category in categories:
+            count = await db.content_chunks.count_documents({
+                "game_id": game_id,
+                "category_id": category
+            })
+            category_stats.append({
+                "category_id": category,
+                "rule_count": count
+            })
+        
+        return {
+            "game_id": game_id,
+            "categories": category_stats
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch categories: {str(e)}")

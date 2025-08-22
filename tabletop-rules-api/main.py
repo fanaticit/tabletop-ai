@@ -194,8 +194,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     try:
-        # Test database connection using the proper get_database dependency
-        db = await get_database()
+        # Test database connection
+        db = get_database()
+        if db is None:
+            return {"status": "unhealthy", "error": "Database not connected"}
         await db.command("ping")
         return {"status": "healthy", "database": "connected"}
     except Exception as e:

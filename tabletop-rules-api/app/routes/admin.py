@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.database import get_database
 from app.services.auth_service import verify_admin_token, get_admin_user
-from app.services.upload_service import process_markdown_file
+# from app.services.upload_service import process_markdown_file  # Not needed
 import logging
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])

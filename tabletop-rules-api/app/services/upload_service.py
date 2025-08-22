@@ -197,3 +197,8 @@ class UploadService:
         )
 
 upload_service = UploadService()
+
+# Convenience functions for backward compatibility
+async def process_markdown_file(content: str, filename: str) -> Dict[str, Any]:
+    """Standalone function wrapper for UploadService.process_markdown_file"""
+    return await upload_service.process_markdown_file(content, filename)

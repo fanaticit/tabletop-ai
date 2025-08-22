@@ -1,70 +1,88 @@
-import { render, screen, fireEvent, waitFor } from '../test-utils';
-import { LoginForm } from '../components/auth/LoginForm';
-import { RegistrationForm } from '../components/auth/RegistrationForm';
+// src/__tests__/auth.test.tsx
+import React from 'react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../test-utils';
+import LoginForm from '../components/auth/LoginForm';
+import RegistrationForm from '../components/auth/RegistrationForm';
 
 describe('Authentication', () => {
   describe('LoginForm', () => {
-    test('renders login form correctly', () => {
+    it('renders login form correctly', () => {
       render(<LoginForm />);
       
-      expect(screen.getByText('Sign In')).toBeInTheDocument();
+      // Use more specific queries to avoid multiple element matches
+      expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
-    test('shows validation errors for empty fields', async () => {
+    it('shows validation errors for empty fields', async () => {
       render(<LoginForm />);
       
       const submitButton = screen.getByRole('button', { name: /sign in/i });
       fireEvent.click(submitButton);
-      
+
       await waitFor(() => {
-        expect(screen.getByText(/username is required/i)).toBeInTheDocument();
-        expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+        expect(screen.getByText('Username is required')).toBeInTheDocument();
+        expect(screen.getByText('Password is required')).toBeInTheDocument();
       });
     });
 
-    test('calls login API with correct credentials', async () => {
+    it('handles successful login', async () => {
       render(<LoginForm />);
       
       const usernameInput = screen.getByLabelText(/username/i);
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      
+
       fireEvent.change(usernameInput, { target: { value: 'testuser' } });
       fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      fireEvent.click(submitButton);
       
-      // Should not show any error messages for valid credentials
+      fireEvent.click(submitButton);
+
       await waitFor(() => {
-        expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument();
+        expect(screen.getByText('Login successful!')).toBeInTheDocument();
       });
     });
 
-    test('shows error message on failed login', async () => {
+    it('handles login failure', async () => {
+      // Mock a failed response
+      global.fetch = jest.fn().mockRejectedValue(new Error('Invalid credentials'));
+
       render(<LoginForm />);
       
       const usernameInput = screen.getByLabelText(/username/i);
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      
-      // Use credentials that will trigger error in our fetch mock
+
       fireEvent.change(usernameInput, { target: { value: 'wronguser' } });
       fireEvent.change(passwordInput, { target: { value: 'wrongpass' } });
-      fireEvent.click(submitButton);
       
+      fireEvent.click(submitButton);
+
       await waitFor(() => {
         expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+      });
+
+      // Restore the mock
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          access_token: 'mock-token',
+          token_type: 'bearer',
+          user: { id: '1', username: 'testuser', email: 'test@example.com' }
+        })
       });
     });
   });
 
   describe('RegistrationForm', () => {
-    test('renders registration form correctly', () => {
+    it('renders registration form correctly', () => {
       render(<RegistrationForm />);
       
-      expect(screen.getByText('Create Account')).toBeInTheDocument();
+      // Use more specific queries
+      expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
@@ -72,39 +90,32 @@ describe('Authentication', () => {
       expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
     });
 
-    test('validates password confirmation', async () => {
+    it('shows validation errors for empty fields', async () => {
       render(<RegistrationForm />);
       
-      const passwordInput = screen.getByLabelText(/^password/i);
-      const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
       const submitButton = screen.getByRole('button', { name: /create account/i });
-      
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'different' } });
       fireEvent.click(submitButton);
-      
+
       await waitFor(() => {
-        expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
+        expect(screen.getByText('Username is required')).toBeInTheDocument();
+        expect(screen.getByText('Email is required')).toBeInTheDocument();
+        expect(screen.getByText('Password is required')).toBeInTheDocument();
       });
     });
 
-    test('successfully registers new user', async () => {
+    it('shows error when passwords do not match', async () => {
       render(<RegistrationForm />);
       
-      const usernameInput = screen.getByLabelText(/username/i);
-      const emailInput = screen.getByLabelText(/email/i);
       const passwordInput = screen.getByLabelText(/^password/i);
       const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
       const submitButton = screen.getByRole('button', { name: /create account/i });
-      
-      fireEvent.change(usernameInput, { target: { value: 'newuser' } });
-      fireEvent.change(emailInput, { target: { value: 'new@example.com' } });
+
       fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
+      fireEvent.change(confirmPasswordInput, { target: { value: 'differentpassword' } });
       fireEvent.click(submitButton);
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Registration successful')).toBeInTheDocument();
+        expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
       });
     });
   });

@@ -158,7 +158,7 @@ export const GameSelector: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-              <h3 style={{ margin: '0', fontSize: '20px' }}>
+              <h3 role="heading" style={{ margin: '0', fontSize: '20px' }}>
                 {game.name}
               </h3>
               <span style={{ 

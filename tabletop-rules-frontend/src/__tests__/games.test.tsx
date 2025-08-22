@@ -23,8 +23,9 @@ describe('Game Selection', () => {
       
       await waitFor(() => {
         expect(screen.getByText('Classic strategy board game')).toBeInTheDocument();
-        expect(screen.getByText('Strategy')).toBeInTheDocument();
-        expect(screen.getByText('Economic')).toBeInTheDocument();
+        // Use getAllByText for elements that appear multiple times
+        expect(screen.getAllByText('Strategy').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Economic').length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -37,7 +38,8 @@ describe('Game Selection', () => {
       });
 
       // Click on the Chess game card
-      const chessCard = screen.getByText('Chess').closest('div');
+      const chessCards = screen.getAllByText('Chess');
+      const chessCard = chessCards[0].closest('div');
       fireEvent.click(chessCard!);
       
       // Should show selected state
@@ -86,15 +88,16 @@ describe('Game Selection', () => {
       
       // Wait for games to load
       await waitFor(() => {
-        expect(screen.getByText('Chess')).toBeInTheDocument();
+        expect(screen.getAllByText('Chess').length).toBeGreaterThanOrEqual(1);
       });
 
       // Click on Strategy category filter
-      const strategyFilter = screen.getByRole('button', { name: /strategy/i });
-      fireEvent.click(strategyFilter);
+      const buttons = screen.getAllByRole('button');
+      const strategyButton = buttons.find(button => button.textContent === 'Strategy');
+      fireEvent.click(strategyButton!);
       
       // Should only show strategy games
-      expect(screen.getByText('Chess')).toBeInTheDocument();
+      expect(screen.getAllByText('Chess').length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByText('Monopoly')).not.toBeInTheDocument();
     });
   });

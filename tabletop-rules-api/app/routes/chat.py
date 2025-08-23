@@ -41,9 +41,8 @@ async def query_rules(
         if not rules:
             return {
                 "query": chat_query.query,
+                "results": [],
                 "game_system": game_id,
-                "response": f"I couldn't find specific rules about '{chat_query.query}' in {game_id}. Try rephrasing your question or check if the game has been uploaded.",
-                "rules_found": [],
                 "search_method": "text_regex"
             }
         
@@ -56,18 +55,17 @@ async def query_rules(
         
         return {
             "query": chat_query.query,
-            "game_system": game_id,
-            "response": "\n".join(response_parts),
-            "rules_found": [
+            "results": [
                 {
+                    "game_id": game_id,
+                    "category_id": rule.get("category_id", "general"),
                     "title": rule["title"],
                     "content": rule["content"],
-                    "category": rule.get("category_id", "general")
+                    "chunk_metadata": rule.get("chunk_metadata", {})
                 }
                 for rule in rules
             ],
-            "search_method": "text_regex",
-            "note": "AI semantic search not available yet - using text matching"
+            "search_method": "text_regex"
         }
         
     except Exception as e:

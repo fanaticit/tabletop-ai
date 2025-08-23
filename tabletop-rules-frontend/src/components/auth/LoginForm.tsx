@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 
 interface LoginFormData {
   username: string;
@@ -12,6 +14,9 @@ interface LoginFormErrors {
 }
 
 export const LoginForm: React.FC = () => {
+  const navigate = useNavigate();
+  const { login, setLoading } = useAuthStore();
+  
   const [formData, setFormData] = useState<LoginFormData>({ 
     username: '', 
     password: '' 
@@ -42,6 +47,7 @@ export const LoginForm: React.FC = () => {
     }
     
     setIsLoading(true);
+    setLoading(true);
     setErrors({});
 
     try {
@@ -61,10 +67,17 @@ export const LoginForm: React.FC = () => {
       const data = await response.json();
       console.log('Login successful:', data);
       
+      // Store the token in the auth store
+      login(data.access_token);
+      
+      // Redirect to chat page
+      navigate('/chat');
+      
     } catch (error) {
       setErrors({ general: (error as Error).message });
     } finally {
       setIsLoading(false);
+      setLoading(false);
     }
   };
 

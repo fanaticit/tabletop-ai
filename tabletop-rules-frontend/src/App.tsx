@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LoginForm } from './components/auth/LoginForm';
 import { RegistrationForm } from './components/auth/RegistrationForm';
 import { GameSelector } from './components/games/GameSelector';
+import { ChatInterface } from './components/chat/ChatInterface';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -25,6 +26,7 @@ function App() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/games" element={<GameSelector />} />
+            <Route path="/chat" element={<ChatInterface />} />
             <Route path="/" element={
               <div style={{ padding: '2rem', textAlign: 'center' }}>
                 <h1>Tabletop Rules Assistant</h1>
@@ -33,6 +35,7 @@ function App() {
                   <li><a href="/login">Login</a></li>
                   <li><a href="/register">Register</a></li>
                   <li><a href="/games">Browse Games</a></li>
+                  <li><a href="/chat">Chat Interface</a></li>
                 </ul>
               </div>
             } />

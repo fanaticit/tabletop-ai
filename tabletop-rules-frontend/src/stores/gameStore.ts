@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface Game {
-  id: string;
+  game_id: string;
   name: string;
-  description: string;
-  category: string;
+  description?: string;
+  complexity?: string;
   rule_count: number;
+  ai_tags?: string[];
   created_at?: string;
   updated_at?: string;
 }

@@ -44,10 +44,28 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// Mock scrollIntoView globally for all tests
+Object.defineProperty(HTMLDivElement.prototype, 'scrollIntoView', {
+  value: jest.fn(),
+  writable: true,
+});
+
+// Mock crypto.randomUUID
+Object.defineProperty(global, 'crypto', {
+  value: { 
+    randomUUID: jest.fn(() => 'test-uuid-123')
+  },
+  writable: true,
+});
+
 // Setup mock responses for our API endpoints
 beforeEach(() => {
   // Reset all mocks before each test
   jest.clearAllMocks();
+  
+  // Clear scrollIntoView mock
+  (HTMLDivElement.prototype.scrollIntoView as jest.Mock).mockClear();
+  (global.crypto.randomUUID as jest.Mock).mockClear();
   
   // Setup default fetch mock responses
   (global.fetch as jest.Mock).mockImplementation((url: string, options?: any) => {

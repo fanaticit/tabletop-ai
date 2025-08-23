@@ -1,56 +1,73 @@
 import { render, screen } from '../test-utils';
 import { ChatInterface } from '../components/chat/ChatInterface';
-import { MessageInput } from '../components/chat/MessageInput';
-import { MessageList } from '../components/chat/MessageList';
+import { useGameStore } from '../stores/gameStore';
+import { useAuthStore } from '../stores/authStore';
 
-const mockMessages = [
-  {
-    id: '1',
-    role: 'user' as const,
-    content: 'How do I move a pawn in chess?',
-    timestamp: new Date(),
-  },
-  {
-    id: '2',
-    role: 'assistant' as const,
-    content: 'In chess, pawns move forward one square at a time, except for their first move when they can move two squares.',
-    timestamp: new Date(),
-  },
-];
-
-describe('Chat Interface', () => {
-  describe('ChatInterface', () => {
-    test('renders chat interface component', () => {
-      render(<ChatInterface />);
-      
-      // Should render without crashing - placeholder implementation
-      expect(screen.getByText(/ChatInterface Placeholder|please select a game first/i)).toBeInTheDocument();
-    });
+describe('ChatInterface Basic Tests', () => {
+  beforeEach(() => {
+    // Set up basic auth state
+    useAuthStore.getState().login('test-token');
   });
 
-  describe('MessageInput', () => {
-    const mockProps = {
-      input: '',
-      handleInputChange: jest.fn(),
-      handleSubmit: jest.fn(),
-      isLoading: false,
-      placeholder: 'Ask about Chess rules...',
-    };
-
-    test('renders message input component', () => {
-      render(<MessageInput {...mockProps} />);
-      
-      // Should render without crashing - placeholder implementation
-      expect(screen.getByText(/MessageInput Placeholder/i)).toBeInTheDocument();
-    });
+  afterEach(() => {
+    // Clear stores after each test
+    useGameStore.getState().clearSelection();
+    useAuthStore.getState().logout();
   });
 
-  describe('MessageList', () => {
-    test('renders message list component', () => {
-      render(<MessageList messages={mockMessages} isLoading={false} />);
-      
-      // Should render without crashing - placeholder implementation
-      expect(screen.getByText(/MessageList Placeholder/i)).toBeInTheDocument();
+  test('shows game selection message when no game selected', () => {
+    render(<ChatInterface />);
+    
+    expect(screen.getByText(/please select a game to start asking questions/i)).toBeInTheDocument();
+  });
+
+  test('renders chat interface when game is selected', () => {
+    // Select a game first
+    useGameStore.getState().selectGame({
+      id: 'chess',
+      name: 'Chess',
+      description: 'Classic chess game',
+      category: 'strategy',
+      rule_count: 10,
     });
+
+    render(<ChatInterface />);
+    
+    expect(screen.getByText('Chess - Rules Chat')).toBeInTheDocument();
+    expect(screen.getByText('Ask questions about the game rules')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask a question about the rules...')).toBeInTheDocument();
+  });
+
+  test('renders message input and send button', () => {
+    useGameStore.getState().selectGame({
+      id: 'chess',
+      name: 'Chess',
+      description: 'Classic chess game',
+      category: 'strategy',
+      rule_count: 10,
+    });
+
+    render(<ChatInterface />);
+    
+    const input = screen.getByPlaceholderText('Ask a question about the rules...');
+    const sendButton = screen.getByRole('button', { name: /send/i });
+    
+    expect(input).toBeInTheDocument();
+    expect(sendButton).toBeInTheDocument();
+    expect(sendButton).toBeDisabled(); // Should be disabled when input is empty
+  });
+
+  test('renders empty conversation state', () => {
+    useGameStore.getState().selectGame({
+      id: 'chess',
+      name: 'Chess',
+      description: 'Classic chess game',
+      category: 'strategy',
+      rule_count: 10,
+    });
+
+    render(<ChatInterface />);
+    
+    expect(screen.getByText(/start a conversation by asking a question/i)).toBeInTheDocument();
   });
 });

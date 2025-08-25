@@ -18,14 +18,14 @@ describe('Game Selection', () => {
       });
     });
 
-    test('shows game descriptions and categories', async () => {
+    test('shows game descriptions and complexity levels', async () => {
       render(<GameSelector />);
       
       await waitFor(() => {
         expect(screen.getByText('Classic strategy board game')).toBeInTheDocument();
         // Use getAllByText for elements that appear multiple times
-        expect(screen.getAllByText('Strategy').length).toBeGreaterThanOrEqual(1);
-        expect(screen.getAllByText('Economic').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('medium').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('hard').length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -83,7 +83,7 @@ describe('Game Selection', () => {
       });
     });
 
-    test('filters games by category', async () => {
+    test('filters games by complexity', async () => {
       render(<GameSelector />);
       
       // Wait for games to load
@@ -91,12 +91,12 @@ describe('Game Selection', () => {
         expect(screen.getAllByText('Chess').length).toBeGreaterThanOrEqual(1);
       });
 
-      // Click on Strategy category filter
+      // Click on medium complexity filter
       const buttons = screen.getAllByRole('button');
-      const strategyButton = buttons.find(button => button.textContent === 'Strategy');
-      fireEvent.click(strategyButton!);
+      const mediumButton = buttons.find(button => button.textContent === 'medium');
+      fireEvent.click(mediumButton!);
       
-      // Should only show strategy games
+      // Should only show medium complexity games
       expect(screen.getAllByText('Chess').length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByText('Monopoly')).not.toBeInTheDocument();
     });

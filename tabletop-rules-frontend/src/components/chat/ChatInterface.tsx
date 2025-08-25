@@ -6,6 +6,38 @@ import { useAuthStore } from '../../stores/authStore';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 
+interface StructuredChatResponse {
+  query: string;
+  game_system: string;
+  structured_response: {
+    id: string;
+    content: {
+      summary: {
+        text: string;
+        confidence: number;
+      };
+      sections: Array<{
+        id: string;
+        title: string;
+        content: string;
+        type: string;
+        level: number;
+        collapsible: boolean;
+        expanded: boolean;
+      }>;
+      sources: Array<{
+        type: string;
+        reference: string;
+        url?: string;
+        page?: number;
+      }>;
+    };
+  };
+  search_method: string;
+  timestamp: string;
+}
+
+// Legacy format for backwards compatibility
 interface QueryResponse {
   results: Array<{
     game_id: string;
@@ -32,7 +64,7 @@ export const ChatInterface: React.FC = () => {
   }, [selectedGame, currentGameId, setCurrentGame]);
 
   const queryMutation = useMutation({
-    mutationFn: async (query: string): Promise<QueryResponse> => {
+    mutationFn: async (query: string): Promise<StructuredChatResponse | QueryResponse> => {
       if (!selectedGame) {
         throw new Error('No game selected');
       }
@@ -65,17 +97,49 @@ export const ChatInterface: React.FC = () => {
         gameId: selectedGame?.game_id,
       });
     },
-    onSuccess: (data: QueryResponse) => {
-      const responseContent = data.results.length > 0
-        ? `Found ${data.results.length} relevant rule${data.results.length === 1 ? '' : 's'}:\n\n${data.results.map(rule => `**${rule.title}**\n${rule.content}`).join('\n\n')}`
-        : 'No specific rules found for your query.';
+    onSuccess: (data: StructuredChatResponse | QueryResponse) => {
+      // Check if this is the new structured response format
+      if ('structured_response' in data) {
+        // Handle new structured response
+        const structuredData = data as StructuredChatResponse;
+        
+        // Transform API response to match frontend types
+        const transformedResponse = {
+          ...structuredData.structured_response,
+          content: {
+            ...structuredData.structured_response.content,
+            sections: structuredData.structured_response.content.sections.map(section => ({
+              ...section,
+              type: section.type as 'summary' | 'explanation' | 'examples' | 'edge_cases',
+              subsections: []
+            })),
+            sources: structuredData.structured_response.content.sources.map(source => ({
+              ...source,
+              type: source.type as 'rulebook' | 'faq' | 'designer_notes' | 'community'
+            }))
+          }
+        };
 
-      addMessage({
-        role: 'assistant',
-        content: responseContent,
-        gameId: selectedGame?.game_id,
-        sources: data.results,
-      });
+        addMessage({
+          role: 'assistant',
+          content: structuredData.structured_response.content.summary.text, // Fallback content
+          gameId: selectedGame?.game_id,
+          structuredResponse: transformedResponse,
+        });
+      } else {
+        // Handle legacy response format for backwards compatibility
+        const legacyData = data as QueryResponse;
+        const responseContent = legacyData.results.length > 0
+          ? `Found ${legacyData.results.length} relevant rule${legacyData.results.length === 1 ? '' : 's'}:\n\n${legacyData.results.map(rule => `**${rule.title}**\n${rule.content}`).join('\n\n')}`
+          : 'No specific rules found for your query.';
+
+        addMessage({
+          role: 'assistant',
+          content: responseContent,
+          gameId: selectedGame?.game_id,
+          sources: legacyData.results,
+        });
+      }
     },
     onError: (error: Error) => {
       addMessage({

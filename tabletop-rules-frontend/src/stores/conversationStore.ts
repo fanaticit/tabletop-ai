@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
+import { StructuredRuleResponse } from '../components/chat/StructuredResponse';
 
 export interface Message {
   id: string;
@@ -8,6 +9,7 @@ export interface Message {
   timestamp: Date;
   gameId?: string;
   sources?: RuleChunk[];
+  structuredResponse?: StructuredRuleResponse;
 }
 
 export interface RuleChunk {

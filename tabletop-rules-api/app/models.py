@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 
 class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000)
@@ -14,6 +15,14 @@ class ChatResponse(BaseModel):
     sources: List[Dict[str, Any]] = []
     confidence_score: Optional[float] = None
     token_usage: Optional[Dict[str, int]] = None
+
+# Enhanced chat response with structured content (using forward reference)
+class StructuredChatResponse(BaseModel):
+    query: str
+    game_system: str
+    structured_response: 'StructuredRuleResponse'
+    search_method: str = "text_regex"
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class StreamResponse(BaseModel):
     type: str  # 'context', 'content', 'complete'
@@ -71,6 +80,49 @@ class MarkdownValidationResult(BaseModel):
     extracted_game_id: Optional[str] = None
     preview: Optional[str] = None
     error: Optional[str] = None
+
+# Structured response models for gaming rule explanations
+class ContentType(str, Enum):
+    SUMMARY = "summary"
+    EXPLANATION = "explanation" 
+    EXAMPLES = "examples"
+    EDGE_CASES = "edge_cases"
+
+class RuleSection(BaseModel):
+    id: str = Field(..., description="Unique section identifier")
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1)
+    type: ContentType
+    level: int = Field(..., ge=0, le=3)
+    collapsible: bool = True
+    expanded: bool = False
+    subsections: Optional[List['RuleSection']] = []
+
+class RuleSource(BaseModel):
+    type: str = Field(..., pattern="^(rulebook|faq|designer_notes|community)$")
+    reference: str
+    url: Optional[str] = None
+    page: Optional[int] = None
+
+class RuleSummary(BaseModel):
+    text: str = Field(..., max_length=500)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+
+class StructuredRuleResponse(BaseModel):
+    id: str
+    content: Dict[str, Any] = Field(default_factory=lambda: {
+        "summary": {"text": "", "confidence": 0.0},
+        "sections": [],
+        "sources": []
+    })
+
+    class Config:
+        # Enable forward references for self-referencing models
+        from_attributes = True
+
+# Update models to handle forward references
+RuleSection.model_rebuild()
+StructuredChatResponse.model_rebuild()
 
 # Content chunk model
 class ContentChunk(BaseModel):

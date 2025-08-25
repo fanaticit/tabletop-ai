@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '../../stores/gameStore';
 
 interface Game {
-  id: string;
+  game_id: string;
   name: string;
-  description: string;
-  category: string;
+  description?: string;
+  complexity?: string;
   rule_count: number;
+  ai_tags?: string[];
 }
 
 export const GameSelector: React.FC = () => {
@@ -28,13 +29,13 @@ export const GameSelector: React.FC = () => {
 
   const games = gamesData?.games || [];
 
-  // Filter games by category
+  // Filter games by category (using complexity as category for now)
   const filteredGames = filterCategory 
-    ? games.filter((game: Game) => game.category.toLowerCase() === filterCategory.toLowerCase())
+    ? games.filter((game: Game) => game.complexity?.toLowerCase() === filterCategory.toLowerCase())
     : games;
 
-  // Get unique categories with proper typing
-  const categories: string[] = Array.from(new Set(games.map((game: Game) => game.category)));
+  // Get unique categories with proper typing (using complexity as category for now)
+  const categories: string[] = Array.from(new Set(games.map((game: Game) => game.complexity).filter(Boolean)));
 
   if (error) {
     return (
@@ -137,12 +138,12 @@ export const GameSelector: React.FC = () => {
       }}>
         {filteredGames.map((game: Game) => (
           <div
-            key={game.id}
+            key={game.game_id}
             onClick={() => selectGame(game)}
             style={{
               padding: '20px',
               backgroundColor: 'white',
-              border: selectedGame?.id === game.id ? '2px solid #0066cc' : '1px solid #ddd',
+              border: selectedGame?.game_id === game.game_id ? '2px solid #0066cc' : '1px solid #ddd',
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'all 0.2s',
@@ -168,7 +169,7 @@ export const GameSelector: React.FC = () => {
                 borderRadius: '12px', 
                 fontSize: '12px' 
               }}>
-                {game.category}
+                {game.complexity || 'Unknown'}
               </span>
             </div>
             
@@ -193,15 +194,15 @@ export const GameSelector: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '8px',
-                backgroundColor: selectedGame?.id === game.id ? '#0066cc' : '#f8f9fa',
-                color: selectedGame?.id === game.id ? 'white' : '#333',
-                border: selectedGame?.id === game.id ? 'none' : '1px solid #ddd',
+                backgroundColor: selectedGame?.game_id === game.game_id ? '#0066cc' : '#f8f9fa',
+                color: selectedGame?.game_id === game.game_id ? 'white' : '#333',
+                border: selectedGame?.game_id === game.game_id ? 'none' : '1px solid #ddd',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '14px'
               }}
             >
-              {selectedGame?.id === game.id ? 'Selected' : 'Select Game'}
+              {selectedGame?.game_id === game.game_id ? 'Selected' : 'Select Game'}
             </button>
           </div>
         ))}

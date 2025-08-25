@@ -109,18 +109,20 @@ beforeEach(() => {
         json: () => Promise.resolve({ 
           games: [
             {
-              id: 'chess',
+              game_id: 'chess',
               name: 'Chess',
               description: 'Classic strategy board game',
-              category: 'Strategy',
+              complexity: 'medium',
               rule_count: 5,
+              ai_tags: ['strategy']
             },
             {
-              id: 'monopoly', 
+              game_id: 'monopoly', 
               name: 'Monopoly',
               description: 'Real estate trading game',
-              category: 'Economic',
+              complexity: 'hard',
               rule_count: 12,
+              ai_tags: ['economic']
             }
           ]
         }),

@@ -24,10 +24,10 @@ describe('ChatInterface Basic Tests', () => {
   test('renders chat interface when game is selected', () => {
     // Select a game first
     useGameStore.getState().selectGame({
-      id: 'chess',
+      game_id: 'chess',
       name: 'Chess',
       description: 'Classic chess game',
-      category: 'strategy',
+      complexity: 'medium',
       rule_count: 10,
     });
 
@@ -40,10 +40,10 @@ describe('ChatInterface Basic Tests', () => {
 
   test('renders message input and send button', () => {
     useGameStore.getState().selectGame({
-      id: 'chess',
+      game_id: 'chess',
       name: 'Chess',
       description: 'Classic chess game',
-      category: 'strategy',
+      complexity: 'medium',
       rule_count: 10,
     });
 
@@ -59,10 +59,10 @@ describe('ChatInterface Basic Tests', () => {
 
   test('renders empty conversation state', () => {
     useGameStore.getState().selectGame({
-      id: 'chess',
+      game_id: 'chess',
       name: 'Chess',
       description: 'Classic chess game',
-      category: 'strategy',
+      complexity: 'medium',
       rule_count: 10,
     });
 

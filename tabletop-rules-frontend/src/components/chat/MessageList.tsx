@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, RuleChunk } from '../../stores/conversationStore';
+import { StructuredResponse } from './StructuredResponse';
 
 interface MessageListProps {
   messages: Message[];
@@ -9,6 +10,26 @@ interface MessageListProps {
 const MessageComponent: React.FC<{ message: Message }> = ({ message }) => {
   const isUser = message.role === 'user';
   
+  // For assistant messages with structured responses, use full width and structured display
+  if (!isUser && message.structuredResponse) {
+    return (
+      <div style={{ marginBottom: '24px', width: '100%' }}>
+        <StructuredResponse response={message.structuredResponse} />
+        <div
+          style={{
+            fontSize: '11px',
+            color: '#6b7280',
+            marginTop: '8px',
+            textAlign: 'right',
+          }}
+        >
+          {new Date(message.timestamp).toLocaleTimeString()}
+        </div>
+      </div>
+    );
+  }
+  
+  // Traditional message display for user messages and simple assistant messages
   return (
     <div
       style={{
@@ -22,7 +43,7 @@ const MessageComponent: React.FC<{ message: Message }> = ({ message }) => {
           maxWidth: '70%',
           padding: '12px 16px',
           borderRadius: '12px',
-          backgroundColor: isUser ? '#007bff' : '#f1f1f1',
+          backgroundColor: isUser ? '#3b82f6' : '#f1f1f1',
           color: isUser ? 'white' : '#333',
           wordWrap: 'break-word',
         }}

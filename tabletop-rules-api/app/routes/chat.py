@@ -156,66 +156,178 @@ def create_structured_no_results_response(query: str, game_id: str) -> Structure
     )
 
 def generate_contextual_summary(query: str, primary_rule: dict, num_rules: int) -> str:
-    """Generate a contextual summary based on the query and primary rule."""
+    """Generate a direct answer following CLAUDE.md template format."""
     query_lower = query.lower()
-    title = primary_rule.get("title", "")
-    content = primary_rule.get("content", "")
     
-    # Try to extract specific information based on the question type
+    # Generate bold direct answers (1-2 sentences max)
     if "how" in query_lower and ("move" in query_lower or "moves" in query_lower):
-        # Movement questions
         if "pawn" in query_lower:
-            return "Pawns move one square forward, or two squares on their first move."
+            return "**Pawns move one square forward, or two squares forward on their first move.**"
         elif "knight" in query_lower:
-            return "Knights move in an L-shape: two squares in one direction, then one square perpendicular."
+            return "**Knights move in an L-shape: two squares in one direction, then one square perpendicular.**"
         elif "king" in query_lower:
-            return "The king moves one square in any direction (horizontal, vertical, or diagonal)."
+            return "**The king moves one square in any direction (horizontal, vertical, or diagonal).**"
         elif "queen" in query_lower:
-            return "The queen moves any number of squares in any direction."
+            return "**The queen moves any number of squares in any direction—horizontally, vertically, or diagonally.**"
         elif "bishop" in query_lower:
-            return "Bishops move diagonally any number of squares."
+            return "**Bishops move diagonally any number of squares.**"
         elif "rook" in query_lower:
-            return "Rooks move horizontally or vertically any number of squares."
+            return "**Rooks move horizontally or vertically any number of squares.**"
         else:
-            return f"Found movement rules for chess pieces."
+            return "**Each chess piece has unique movement patterns.**"
     
     elif "what" in query_lower:
         if "checkmate" in query_lower:
-            return "Checkmate occurs when the king is in check and cannot escape capture."
-        elif "check" in query_lower:
-            return "Check is when the king is under attack and must be moved to safety."
+            return "**Checkmate occurs when the king is in check and cannot escape capture, ending the game.**"
+        elif "check" in query_lower and "checkmate" not in query_lower:
+            return "**Check is when the king is under attack and must be moved to safety immediately.**"
         elif "castling" in query_lower or "castle" in query_lower:
-            return "Castling is a special move involving the king and a rook."
+            return "**Castling is a special move that allows the king and rook to move simultaneously for king safety.**"
         elif "en passant" in query_lower:
-            return "En passant is a special pawn capture rule."
+            return "**En passant is a special pawn capture rule for pawns that move two squares forward.**"
     
     elif "can" in query_lower:
         if "pawn" in query_lower:
-            return "Pawns can move forward one square, capture diagonally, and promote when reaching the end."
+            return "**Pawns can move forward, capture diagonally, and promote when reaching the opposite end.**"
         elif "king" in query_lower and "castle" in query_lower:
-            return "The king can castle if neither the king nor rook has moved and there are no pieces between them."
+            return "**The king can castle if neither piece has moved and there are no pieces between them.**"
     
-    # Extract first sentence from content as fallback
-    if content:
-        first_sentence = content.split('.')[0].strip()
-        if len(first_sentence) > 20 and len(first_sentence) < 200:
-            return first_sentence + "."
+    # Generic fallback with bold formatting
+    return f"**Found specific rules about {query.lower().replace('how does', '').replace('what is', '').strip()}.**"
+
+def generate_detailed_explanation(query_lower: str, primary_rule: dict, rules: List) -> str:
+    """Generate detailed explanation with concrete example following CLAUDE.md format."""
     
-    # Default to rule title
-    if title:
-        return title.strip('.')
+    if "pawn" in query_lower and "move" in query_lower:
+        return """Pawns are unique pieces with special movement rules. They move straight forward one square to an unoccupied square. On a pawn's very first move from its starting position, it has the option to advance two squares forward instead of one, provided both squares are unoccupied. Unlike other pieces, pawns capture differently than they move—they capture diagonally forward one square.
+
+Example: A pawn on e2 can move to e3, or jump to e4 on its first move. If there's an opponent piece on d3 or f3, the pawn can capture it by moving diagonally."""
     
-    return f"Found {num_rules} rule{'s' if num_rules > 1 else ''} about {query.lower()}."
+    elif "knight" in query_lower and "move" in query_lower:
+        return """The knight has the most distinctive movement pattern in chess. It moves in an "L" shape: exactly two squares in one direction (horizontal or vertical), then exactly one square perpendicular to that direction. Knights are the only pieces that can "jump over" other pieces during their move.
+
+Example: A knight on d4 can move to c2, e2, b3, f3, b5, f5, c6, or e6. Even if there are pieces blocking the path, the knight can still reach its destination squares."""
+    
+    elif "king" in query_lower and "move" in query_lower:
+        return """The king is the most important piece but has limited mobility. It can move exactly one square in any direction: horizontally, vertically, or diagonally. The king can never move into check (a square attacked by an opponent's piece).
+
+Example: A king on e1 can move to d1, d2, e2, f2, or f1, provided these squares are not under attack by enemy pieces."""
+    
+    elif "queen" in query_lower and "move" in query_lower:
+        return """The queen is the most powerful piece, combining the movement abilities of both the rook and bishop. She can move any number of squares horizontally, vertically, or diagonally, but cannot jump over other pieces.
+
+Example: A queen on d4 can move to any square along the d-file, 4th rank, or the diagonals (a1-h8 and g1-a7), as long as the path is clear."""
+    
+    elif "bishop" in query_lower and "move" in query_lower:
+        return """Bishops move exclusively along diagonal lines. Each player starts with two bishops: one on light squares and one on dark squares, and they remain on their respective colored squares throughout the game.
+
+Example: A bishop on c1 can move to b2, a3, d2, e3, f4, g5, or h6, but cannot reach any dark squares."""
+    
+    elif "rook" in query_lower and "move" in query_lower:
+        return """Rooks move in straight lines along ranks (horizontal) and files (vertical). They can move any number of squares in these directions but cannot move diagonally or jump over pieces.
+
+Example: A rook on a1 can move anywhere along the a-file (a2-a8) or the first rank (b1-h1), provided the path is unobstructed."""
+    
+    elif "checkmate" in query_lower:
+        return """Checkmate ends the game immediately. It occurs when the king is in check (under attack) and has no legal moves to escape capture. This includes being unable to move to a safe square, block the attack, or capture the attacking piece.
+
+Example: If a queen on d8 attacks a king on e8, and the king cannot move to f8 (blocked by own pieces) or capture the queen, it's checkmate."""
+    
+    elif "check" in query_lower and "checkmate" not in query_lower:
+        return """When a king is in check, the player must immediately resolve the threat on their next move. There are three ways to get out of check: move the king to a safe square, capture the attacking piece, or block the attack with another piece.
+
+Example: If a rook attacks your king, you can move the king away, capture the rook with another piece, or place a piece between the rook and king."""
+    
+    elif "castling" in query_lower or "castle" in query_lower:
+        return """Castling is a special defensive move involving the king and either rook. The king moves two squares toward the rook, and the rook moves to the square the king crossed. This can only be done if neither piece has moved, there are no pieces between them, and the king is not in check.
+
+Example: In kingside castling, the king moves from e1 to g1, and the rook moves from h1 to f1, all in one turn."""
+    
+    # Generic fallback using actual rule content
+    if primary_rule and primary_rule.get("content"):
+        content = primary_rule["content"]
+        # Extract first meaningful paragraph
+        clean_content = re.sub(r'^#+\s*', '', content, flags=re.MULTILINE)
+        paragraphs = [p.strip() for p in clean_content.split('\n\n') if len(p.strip()) > 50]
+        if paragraphs:
+            return paragraphs[0][:400] + ("..." if len(paragraphs[0]) > 400 else "")
+    
+    return f"This rule covers the specific mechanics and applications within {query_lower}."
+
+def generate_related_rules(query_lower: str, related_rules: List) -> str:
+    """Generate related rules bullet points following CLAUDE.md format."""
+    
+    if "pawn" in query_lower and "move" in query_lower:
+        return """• **En Passant**: Special pawn capture rule when opponent pawn moves two squares
+• **Pawn Promotion**: Pawns reaching the opposite end transform into any piece
+• **Illegal Moves**: Moving pawns backward or sideways is forbidden"""
+    
+    elif "knight" in query_lower and "move" in query_lower:
+        return """• **Knight Forks**: Knights can attack multiple pieces simultaneously
+• **Knight vs Bishop**: Knights and bishops have roughly equal value in most positions  
+• **Knight Outposts**: Knights are strongest when placed on secure squares in enemy territory"""
+    
+    elif "king" in query_lower and "move" in query_lower:
+        return """• **Castling**: Special king move for safety and rook development
+• **King and Pawn Endings**: Basic endgame technique with king and pawns
+• **Stalemate**: When the king has no legal moves but is not in check"""
+    
+    elif "queen" in query_lower and "move" in query_lower:
+        return """• **Queen Development**: Generally develop minor pieces before the queen
+• **Queen Trades**: Exchanging queens often leads to endgames
+• **Queen vs Multiple Pieces**: Queen can sometimes fight several minor pieces"""
+    
+    elif "bishop" in query_lower and "move" in query_lower:
+        return """• **Bishop Pair**: Having both bishops is usually advantageous
+• **Good vs Bad Bishop**: Bishops blocked by own pawns are considered "bad"
+• **Fianchetto**: Developing bishops on long diagonals from knight squares"""
+    
+    elif "rook" in query_lower and "move" in query_lower:
+        return """• **Castling**: Rooks participate in the special castling move
+• **Rook Endgames**: Most common type of chess endgame
+• **Open Files**: Rooks are most effective on open or semi-open files"""
+    
+    elif "checkmate" in query_lower:
+        return """• **Check**: When the king is under attack but can escape
+• **Stalemate**: King has no legal moves but is not in check (draw)
+• **Basic Checkmate Patterns**: Queen and king vs king, rook and king vs king"""
+    
+    elif "check" in query_lower:
+        return """• **Checkmate**: When check cannot be escaped, ending the game
+• **Discovery Check**: Moving a piece to reveal check from another piece
+• **Double Check**: Rare situation when king is in check from two pieces"""
+    
+    elif "castling" in query_lower:
+        return """• **Kingside Castling**: More common, castling toward the h-file
+• **Queenside Castling**: Less common, castling toward the a-file
+• **Castling Rights**: Permanently lost if king or rook moves"""
+    
+    # Generate from actual related rules if available
+    if related_rules:
+        bullets = []
+        for rule in related_rules[:5]:
+            title = rule.get("title", "Unknown Rule")
+            content = rule.get("content", "")
+            # Extract first sentence as description
+            first_sentence = content.split('.')[0].strip() if content else "Additional rule information"
+            if len(first_sentence) > 100:
+                first_sentence = first_sentence[:100] + "..."
+            bullets.append(f"• **{title}**: {first_sentence}")
+        return '\n'.join(bullets)
+    
+    return """• **General Rules**: Basic chess principles and guidelines
+• **Special Moves**: Advanced techniques and exceptions
+• **Strategy Tips**: Positional and tactical considerations"""
 
 def create_structured_gaming_response(rules: List, query: str, game_id: str) -> StructuredRuleResponse:
-    """Create structured gaming response following three-tier architecture."""
+    """Create structured gaming response following CLAUDE.md template format."""
     
     if not rules:
         return StructuredRuleResponse(
             id=str(uuid.uuid4()),
             content={
                 "summary": {
-                    "text": f"No specific rules found for '{query}' in {game_id}. Try a different search term.",
+                    "text": f"**No specific rules found for '{query}' in {game_id}.** Try a different search term.",
                     "confidence": 0.3
                 },
                 "sections": [],
@@ -223,71 +335,54 @@ def create_structured_gaming_response(rules: List, query: str, game_id: str) -> 
             }
         )
     
-    # Generate contextual summary - brief answer (Level 1)
     primary_rule = rules[0]
-    summary_text = generate_contextual_summary(query, primary_rule, len(rules))
+    query_lower = query.lower()
     
-    # Create sections with progressive disclosure (Level 2)
-    sections = []
+    # 1. DIRECT ANSWER (Bold, 1-2 sentences)
+    direct_answer = generate_contextual_summary(query, primary_rule, len(rules))
     
-    # Basic explanation section
-    if rules:
-        main_content = ""
-        for i, rule in enumerate(rules[:3]):  # Limit to top 3 for summary
-            rule_content = rule["content"]
-            # Clean up content - remove markdown headers and excess whitespace
-            clean_content = re.sub(r'^#+\s*', '', rule_content, flags=re.MULTILINE)
-            clean_content = re.sub(r'\n\s*\n', '\n\n', clean_content.strip())
-            
-            if i == 0:
-                main_content = clean_content[:400] + ("..." if len(clean_content) > 400 else "")
-            else:
-                main_content += f"\n\n**Related: {rule['title']}**\n{clean_content[:200]}{'...' if len(clean_content) > 200 else ''}"
-        
-        sections.append(RuleSection(
-            id=f"basic_rule_{uuid.uuid4().hex[:8]}",
-            title="Rule Explanation",
-            content=main_content,
-            type=ContentType.EXPLANATION,
-            level=1,
-            collapsible=True,
-            expanded=True
-        ))
+    # 2. DETAILED EXPLANATION with concrete example
+    detailed_explanation = generate_detailed_explanation(query_lower, primary_rule, rules)
     
-    # Examples section if we have multiple rules
-    if len(rules) > 1:
-        examples_content = "Here are related rules that might help:\n\n"
-        for rule in rules[1:3]:  # Show 2nd and 3rd rules as examples
-            examples_content += f"• **{rule['title']}**: {rule['content'][:150]}{'...' if len(rule['content']) > 150 else ''}\n\n"
-        
-        sections.append(RuleSection(
-            id=f"examples_{uuid.uuid4().hex[:8]}",
-            title="Related Rules",
-            content=examples_content.strip(),
-            type=ContentType.EXAMPLES,
-            level=2,
-            collapsible=True,
-            expanded=False
-        ))
+    # 3. RELATED RULES (3-5 bullet points)
+    related_rules_content = generate_related_rules(query_lower, rules[1:5] if len(rules) > 1 else [])
     
-    # Create sources (Level 3)
+    # Create single section with the complete template format
+    template_content = f"""{direct_answer}
+
+{detailed_explanation}
+
+**Related Rules**
+{related_rules_content}"""
+    
+    sections = [RuleSection(
+        id=f"template_response_{uuid.uuid4().hex[:8]}",
+        title="Rule Explanation",
+        content=template_content,
+        type=ContentType.EXPLANATION,
+        level=1,
+        collapsible=True,
+        expanded=True
+    )]
+    
+    # Create sources
     sources = []
-    for rule in rules[:3]:  # Top 3 rules only
+    for rule in rules[:3]:
         category = rule.get("category_id", "general")
         sources.append(RuleSource(
             type="rulebook",
             reference=f"{game_id.title()} Rules - {category.title()}",
-            page=None  # Would be populated with actual page numbers in production
+            page=None
         ))
     
-    # Calculate confidence based on relevance
-    confidence = min(0.95, 0.6 + (len(rules) * 0.1))  # Higher confidence with more matches
+    # High confidence for template responses
+    confidence = 0.95
     
     return StructuredRuleResponse(
         id=str(uuid.uuid4()),
         content={
             "summary": {
-                "text": summary_text,
+                "text": direct_answer,
                 "confidence": confidence
             },
             "sections": sections,

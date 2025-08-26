@@ -10,6 +10,7 @@ from app.models import (
     RuleSource, 
     ContentType
 )
+from app.services.ai_chat_service import ai_chat_service
 from pydantic import BaseModel
 from typing import List, Optional
 import re
@@ -319,6 +320,59 @@ def generate_related_rules(query_lower: str, related_rules: List) -> str:
 • **Special Moves**: Advanced techniques and exceptions
 • **Strategy Tips**: Positional and tactical considerations"""
 
+def create_ai_structured_response(ai_result: dict, query: str, game_id: str, rules: List) -> StructuredRuleResponse:
+    """Create structured response from AI-generated content."""
+    
+    ai_response_text = ai_result.get("response", "")
+    usage_info = ai_result.get("usage", {})
+    
+    # Extract direct answer (should be in bold at the start)
+    lines = ai_response_text.split('\n')
+    direct_answer = lines[0].strip() if lines else "AI response generated."
+    
+    # Use the full AI response as the section content
+    sections = [RuleSection(
+        id=f"ai_response_{uuid.uuid4().hex[:8]}",
+        title="AI-Powered Rule Explanation",
+        content=ai_response_text,
+        type=ContentType.EXPLANATION,
+        level=1,
+        collapsible=True,
+        expanded=True
+    )]
+    
+    # Create sources from the rules used
+    sources = []
+    for rule in rules[:3]:
+        category = rule.get("category_id", "general")
+        sources.append(RuleSource(
+            type="rulebook",
+            reference=f"{game_id.title()} Rules - {category.title()}",
+            page=None
+        ))
+    
+    # Higher confidence for AI responses
+    confidence = 0.95
+    
+    # Add usage metadata to summary for monitoring
+    summary_text = direct_answer
+    if usage_info:
+        cost = usage_info.get("estimated_cost", 0)
+        tokens = usage_info.get("total_tokens", 0)
+        summary_text += f" (AI: ${cost:.4f}, {tokens} tokens)"
+    
+    return StructuredRuleResponse(
+        id=str(uuid.uuid4()),
+        content={
+            "summary": {
+                "text": summary_text,
+                "confidence": confidence
+            },
+            "sections": sections,
+            "sources": sources
+        }
+    )
+
 def create_structured_gaming_response(rules: List, query: str, game_id: str) -> StructuredRuleResponse:
     """Create structured gaming response following CLAUDE.md template format."""
     
@@ -422,18 +476,75 @@ async def query_rules(
         if not rules:
             return create_structured_no_results_response(chat_query.query, game_id)
         
-        # Create structured response following gaming interface patterns
+        # Try AI-powered response first, fallback to template-based response
+        try:
+            ai_result = await ai_chat_service.generate_rule_response(
+                query=chat_query.query,
+                game_id=game_id, 
+                rules_context=rules
+            )
+            
+            if not ai_result.get("error") and ai_result.get("ai_powered"):
+                # Create structured response from AI output
+                structured_response = create_ai_structured_response(
+                    ai_result, chat_query.query, game_id, rules
+                )
+                
+                return StructuredChatResponse(
+                    query=chat_query.query,
+                    game_system=game_id,
+                    structured_response=structured_response,
+                    search_method="ai_powered_gpt4o_mini"
+                )
+            else:
+                # AI failed, use fallback
+                print(f"AI service failed: {ai_result.get('error', 'Unknown error')}, using fallback")
+                
+        except Exception as e:
+            print(f"AI service exception: {e}, using fallback")
+        
+        # Fallback to existing template-based response
         structured_response = create_structured_gaming_response(rules, chat_query.query, game_id)
         
         return StructuredChatResponse(
             query=chat_query.query,
             game_system=game_id,
             structured_response=structured_response,
-            search_method="enhanced_scoring"
+            search_method="enhanced_scoring_fallback"
         )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
+@router.get("/ai-usage")
+async def get_ai_usage():
+    """Get AI usage statistics for monitoring"""
+    try:
+        usage_summary = ai_chat_service.get_usage_summary()
+        return {
+            "ai_service": "openai_gpt4o_mini",
+            "usage": usage_summary,
+            "status": "active"
+        }
+    except Exception as e:
+        return {
+            "ai_service": "openai_gpt4o_mini", 
+            "status": "error",
+            "error": str(e)
+        }
+
+@router.get("/ai-test")
+async def test_ai_connection():
+    """Test AI service connection"""
+    try:
+        test_result = await ai_chat_service.test_connection()
+        return test_result
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
 
 @router.get("/search/{game_id}")
 async def keyword_search(

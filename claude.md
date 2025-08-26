@@ -6,6 +6,237 @@ Building a modern AI-powered service where tabletop game players can ask natural
 
 **Current Status**: ✅ **COMPLETED** - Full AI-powered rule responses with GPT-4o-mini integration, intelligent search algorithm, and comprehensive testing suite. Ready for production deployment.
 
+## 🚀 NEXT MAJOR ENHANCEMENT: Game Selection & Chat Management Dashboard
+
+### 🎯 Enhanced User Flow
+Currently: `Login → Chat Interface (basic game picker)`  
+**New Flow**: `Login → Dashboard → Enhanced Game Selection → Multi-Chat Management`
+
+### 📋 Implementation Plan
+
+#### Phase 1: Dashboard Hub (Week 1) 
+**Create Post-Login Command Center**
+
+```typescript
+// New Components Structure
+src/components/
+├── dashboard/
+│   ├── Dashboard.tsx           # ✨ Main hub with game grid + recent chats
+│   ├── GameGrid.tsx            # ✨ Visual game cards with "Start Chat" buttons  
+│   ├── ConversationHistory.tsx # ✨ Recent conversations with preview
+│   └── QuickActions.tsx        # ✨ New chat, settings, preferences
+```
+
+**Dashboard Features:**
+- **Game Selection Grid**: Visual cards showing game thumbnails, complexity, player count
+- **Recent Conversations**: Last 5-10 chats with game context and preview
+- **Quick Actions**: "Start New Chat", "Continue Recent", user settings
+- **Game Statistics**: Show conversation count per game, favorite games
+
+#### Phase 2: Enhanced Conversation Management (Week 2)
+**Multi-Conversation Support**
+
+```typescript
+// Enhanced ConversationStore
+interface ConversationState {
+  conversations: Conversation[];        // All user conversations
+  activeConversation: Conversation | null;
+  currentGameId: string | null;
+  
+  // New Actions
+  createNewConversation: (gameId: string) => void;
+  loadConversation: (conversationId: string) => void;
+  deleteConversation: (conversationId: string) => void;
+  getGameConversations: (gameId: string) => Conversation[];
+  generateChatTitle: (firstMessage: string) => string;
+}
+
+interface Conversation {
+  id: string;
+  gameId: string;
+  gameName: string;
+  title: string;                       // Auto-generated: "Pawn movement rules"
+  lastMessage: string;                 // Preview for conversation list
+  lastMessageAt: Date;
+  messageCount: number;
+  createdAt: Date;
+  isActive: boolean;
+}
+```
+
+#### Phase 3: Backend Conversation API (Week 2)
+**Database & API Enhancement**
+
+```python
+# New FastAPI Endpoints
+POST   /api/conversations                    # Create new conversation
+GET    /api/conversations                    # List user conversations  
+GET    /api/conversations/{conversation_id}  # Get conversation with messages
+DELETE /api/conversations/{conversation_id}  # Delete conversation
+POST   /api/conversations/{conversation_id}/messages # Add message to conversation
+```
+
+**New MongoDB Collections:**
+```javascript
+// conversations collection
+{
+  _id: ObjectId,
+  user_id: String,                 // "admin" for now, ObjectId later
+  game_id: String,                 // "chess", "dnd5e", etc.
+  title: String,                   // "Pawn Movement Rules" (auto-generated)
+  created_at: Date,
+  last_message_at: Date,
+  message_count: Number,
+  is_active: Boolean
+}
+
+// messages collection  
+{
+  _id: ObjectId,
+  conversation_id: ObjectId,
+  role: String,                    // "user" | "assistant"
+  content: String,
+  sources: [String],               // Rule references
+  timestamp: Date,
+  tokens_used: Number,             // Cost tracking
+  cost_estimate: Number            // In cents
+}
+```
+
+#### Phase 4: Enhanced Routing (Week 3)
+**Updated Navigation Structure**
+
+```typescript
+// App.tsx routing enhancement
+<Routes>
+  <Route path="/login" element={<LoginForm />} />
+  <Route path="/register" element={<RegistrationForm />} />
+  
+  {/* Protected routes */}
+  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+  <Route path="/games" element={<ProtectedRoute><GameSelector /></ProtectedRoute>} />
+  
+  {/* Chat routes with conversation support */}
+  <Route path="/chat" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
+  <Route path="/chat/:gameId" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
+  <Route path="/chat/:gameId/:conversationId" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
+  
+  {/* Settings and preferences */}
+  <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
+</Routes>
+```
+
+### 🎨 UI/UX Enhancements
+
+#### Dashboard Design
+- **Game Cards**: Thumbnails, descriptions, difficulty indicators, "Start Chat" buttons
+- **Recent Chats**: Conversation previews with timestamps and message counts
+- **Quick Stats**: Total conversations, favorite games, usage statistics
+- **Search & Filter**: Find games by category, complexity, or previous conversations
+
+#### Conversation Management
+- **Auto-Generated Titles**: "Pawn Movement Rules", "Combat Phase Questions", "Character Creation Help"
+- **Conversation Switching**: Easy navigation between multiple chats for same game
+- **Chat History**: Persistent message history with search capabilities
+- **Visual Indicators**: New messages, unread conversations, active chat highlighting
+
+### 🔧 Technical Implementation Details
+
+#### State Management Strategy
+```typescript
+// Enhanced store integration
+const Dashboard = () => {
+  const { user } = useAuthStore();
+  const { selectedGame, selectGame } = useGameStore();
+  const { 
+    conversations, 
+    createNewConversation,
+    getGameConversations 
+  } = useConversationStore();
+  
+  const handleStartChat = (gameId: string) => {
+    selectGame(gameId);
+    const newConversation = createNewConversation(gameId);
+    navigate(`/chat/${gameId}/${newConversation.id}`);
+  };
+};
+```
+
+#### Conversation Title Generation
+```typescript
+// Auto-generate meaningful chat titles
+const generateChatTitle = (firstUserMessage: string): string => {
+  // Extract key concepts: "How do pawns move?" → "Pawn Movement"
+  // Use first 3-5 words if question
+  // Fallback to "Chat about [GameName]"
+  return titleFromMessage(firstUserMessage) || `Chat about ${gameName}`;
+};
+```
+
+### 📊 Expected Benefits
+
+#### User Experience
+- **Reduced Cognitive Load**: Clear game selection without immediate chat pressure
+- **Better Organization**: Multiple conversations per game, easy switching
+- **Conversation History**: Never lose previous rule discussions
+- **Quick Access**: Jump into recent conversations instantly
+- **Visual Context**: See all games and conversations at a glance
+
+#### Technical Benefits
+- **Scalable Architecture**: Support unlimited conversations per user
+- **Better State Management**: Separate concerns for games vs conversations
+- **Database Efficiency**: Structured conversation and message storage
+- **Cost Tracking**: Per-conversation usage and billing metrics
+
+### 🧪 Testing Strategy
+
+#### New Test Suites Required
+```typescript
+// Dashboard tests (15+ tests)
+- Game grid rendering and interaction
+- Recent conversations display
+- Quick actions functionality
+- Navigation to chat interfaces
+
+// Conversation management tests (20+ tests)
+- Create/delete conversations
+- Load conversation history
+- Auto-generate chat titles
+- Conversation switching
+
+// Enhanced routing tests (10+ tests)
+- Protected route navigation
+- Conversation URL parameters
+- Deep linking to specific chats
+```
+
+### 🚀 Implementation Priority
+
+**Week 1: Dashboard Foundation**
+1. Create Dashboard component with basic layout
+2. Enhance GameGrid with visual cards and actions
+3. Build ConversationHistory component
+4. Update routing to use Dashboard as home
+
+**Week 2: Conversation System**  
+5. Implement enhanced ConversationStore with multi-chat support
+6. Add backend API endpoints for conversation CRUD
+7. Create MongoDB collections for conversations and messages
+8. Build conversation switching UI in ChatInterface
+
+**Week 3: Polish & Testing**
+9. Add auto-generated conversation titles
+10. Implement conversation search and filtering
+11. Create comprehensive test suite for new features
+12. Add user settings and preferences panel
+
+### 💡 Future Enhancements
+- **Conversation Sharing**: Share interesting rule discussions
+- **Conversation Export**: Download chat history as PDF/text
+- **Smart Suggestions**: Recommend related conversations or rules
+- **Conversation Analytics**: Most discussed rules, popular topics
+- **Collaborative Chats**: Multiple users in same conversation (future)
+
 ## 🏗️ Architecture & Technology Stack
 
 ### Backend: FastAPI + MongoDB Atlas + AI Integration

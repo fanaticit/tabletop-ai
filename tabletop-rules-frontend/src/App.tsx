@@ -1,11 +1,13 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginForm } from './components/auth/LoginForm';
 import { RegistrationForm } from './components/auth/RegistrationForm';
 import { GameSelector } from './components/games/GameSelector';
 import { ChatInterface } from './components/chat/ChatInterface';
+import Dashboard from './components/dashboard/Dashboard';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -23,22 +25,42 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
+            {/* Public routes */}
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegistrationForm />} />
-            <Route path="/games" element={<GameSelector />} />
-            <Route path="/chat" element={<ChatInterface />} />
+            
+            {/* Protected routes */}
             <Route path="/" element={
-              <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <h1>Tabletop Rules Assistant</h1>
-                <p>Frontend is ready! Navigate to:</p>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li><a href="/login">Login</a></li>
-                  <li><a href="/register">Register</a></li>
-                  <li><a href="/games">Browse Games</a></li>
-                  <li><a href="/chat">Chat Interface</a></li>
-                </ul>
-              </div>
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
             } />
+            
+            <Route path="/games" element={
+              <ProtectedRoute>
+                <GameSelector />
+              </ProtectedRoute>
+            } />
+            
+            {/* Chat routes with conversation support */}
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <ChatInterface />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat/:gameId" element={
+              <ProtectedRoute>
+                <ChatInterface />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat/:gameId/:conversationId" element={
+              <ProtectedRoute>
+                <ChatInterface />
+              </ProtectedRoute>
+            } />
+            
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>

@@ -194,7 +194,12 @@ Example format:
     def get_usage_summary(self) -> Dict[str, Any]:
         """Get usage statistics for monitoring"""
         if not self.usage_log:
-            return {"total_requests": 0, "total_cost": 0.0, "total_tokens": 0}
+            return {
+                "total_requests": 0, 
+                "total_cost": 0.0, 
+                "total_tokens": 0,
+                "average_cost_per_request": 0
+            }
         
         total_cost = sum(entry["estimated_cost"] for entry in self.usage_log)
         total_tokens = sum(entry["total_tokens"] for entry in self.usage_log)

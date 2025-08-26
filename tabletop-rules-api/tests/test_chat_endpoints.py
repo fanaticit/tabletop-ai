@@ -81,9 +81,10 @@ Example: A pawn on e2 can move to e3, or jump to e4 on its first move.
             "confidence": "high"
         }
     
+    @pytest.mark.asyncio
     @patch('app.routes.chat.games_collection')
     @patch('app.routes.chat.content_collection')
-    def test_chat_query_basic_success(self, mock_content, mock_games, mock_game_data, mock_rules_data):
+    async def test_chat_query_basic_success(self, mock_content, mock_games, mock_game_data, mock_rules_data):
         """Test basic chat query without AI"""
         # Mock database responses
         mock_games.find_one.return_value = mock_game_data

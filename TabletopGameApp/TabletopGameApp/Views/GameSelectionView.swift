@@ -10,6 +10,7 @@ import SwiftUI
 struct GameSelectionView: View {
     @StateObject private var gameManager = GameManager()
     @EnvironmentObject private var authManager: AuthenticationManager
+    @EnvironmentObject private var navigationManager: NavigationManager
     @State private var searchText = ""
     @State private var selectedComplexity: String? = nil
     
@@ -152,7 +153,7 @@ struct GameSelectionView: View {
                     GameCard(
                         game: game,
                         onSelect: {
-                            gameManager.selectGame(game)
+                            navigationManager.navigateToChat(game: game)
                         }
                     )
                 }
@@ -283,10 +284,10 @@ struct GameCard: View {
                     .lineLimit(3)
                 
                 // Categories
-                if !game.categories.isEmpty {
+                if !game.safeCategories.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(Array(game.categories.prefix(5)), id: \.self) { category in
+                            ForEach(Array(game.safeCategories.prefix(5)), id: \.self) { category in
                                 Text(category)
                                     .font(.system(size: 12, weight: .medium))
                                     .padding(.horizontal, 8)
@@ -333,7 +334,7 @@ struct GameCard: View {
                 .font(.system(size: 10))
                 .foregroundColor(.gamingSecondary)
             
-            Text("\(game.minPlayers)-\(game.maxPlayers)")
+            Text("\(game.min_players)-\(game.max_players)")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.gamingSecondary)
         }
@@ -345,14 +346,14 @@ struct GameCard: View {
                 .font(.system(size: 10))
                 .foregroundColor(.gamingSecondary)
             
-            Text("\(game.ruleCount) rules")
+            Text("\(game.rule_count) rules")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.gamingSecondary)
         }
     }
     
     private var gameIcon: some View {
-        Text(game.gameId == "chess" ? "♟️" : "🎲")
+        Text(game.game_id == "chess" ? "♟️" : "🎲")
             .font(.system(size: 32))
     }
     

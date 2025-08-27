@@ -26,40 +26,40 @@ struct User: Codable, Identifiable {
 }
 
 struct TokenResponse: Codable {
-    let accessToken: String
-    let tokenType: String
-    let expiresIn: Int?
+    let access_token: String  // Use exact JSON key names to avoid any CodingKeys issues
+    let token_type: String
+    let expires_in: Int?
+    let user: TokenUser?
     
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case tokenType = "token_type"
-        case expiresIn = "expires_in"
+    struct TokenUser: Codable {
+        let id: String
+        let username: String
+        let email: String
     }
 }
 
-struct Game: Codable, Identifiable {
-    let gameId: String
+struct Game: Codable, Identifiable, Hashable {
+    let game_id: String
     let name: String
     let description: String
     let complexity: String
-    let minPlayers: Int
-    let maxPlayers: Int
-    let ruleCount: Int
-    let categories: [String]
-    let aiTags: [String]
-    let createdAt: Date
+    let min_players: Int
+    let max_players: Int
+    let rule_count: Int
+    let publisher: String?
+    let categories: [String]?
+    let ai_tags: [String]?
+    let created_at: Date?
     
-    var id: String { gameId }
+    var id: String { game_id }
     
-    enum CodingKeys: String, CodingKey {
-        case gameId = "game_id"
-        case name, description, complexity
-        case minPlayers = "min_players"
-        case maxPlayers = "max_players"
-        case ruleCount = "rule_count"
-        case categories
-        case aiTags = "ai_tags"
-        case createdAt = "created_at"
+    // Provide defaults for optional fields that may not be in API response
+    var safeCategories: [String] {
+        return categories ?? []
+    }
+    
+    var safeAiTags: [String] {
+        return ai_tags ?? []
     }
 }
 

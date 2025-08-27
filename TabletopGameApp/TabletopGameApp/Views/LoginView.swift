@@ -146,12 +146,15 @@ struct LoginView: View {
     }
     
     private func performLogin() {
+        print("🔐 Starting login process...")
         Task {
             do {
                 try await authManager.login(username: username, password: password)
+                print("🎉 Login completed successfully!")
+                print("🚀 Should navigate to dashboard now...")
             } catch {
                 // Error is handled by the AuthenticationManager
-                print("Login error: \(error)")
+                print("❌ Login error in view: \(error)")
             }
         }
     }

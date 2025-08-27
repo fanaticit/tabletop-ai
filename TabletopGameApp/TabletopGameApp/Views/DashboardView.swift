@@ -11,8 +11,7 @@ struct DashboardView: View {
     @StateObject private var gameManager = GameManager()
     @StateObject private var conversationManager = ConversationManager()
     @EnvironmentObject private var authManager: AuthenticationManager
-    @State private var selectedGame: Game?
-    @State private var showGameSelection = false
+    @EnvironmentObject private var navigationManager: NavigationManager
     @State private var showAllConversations = false
     
     var body: some View {
@@ -54,14 +53,6 @@ struct DashboardView: View {
             if gameManager.games.isEmpty {
                 await gameManager.loadGames()
             }
-        }
-        .sheet(isPresented: $showGameSelection) {
-            GameSelectionView()
-                .environmentObject(authManager)
-        }
-        .fullScreenCover(item: $selectedGame) { game in
-            ChatView(game: game)
-                .environmentObject(authManager)
         }
     }
     
@@ -111,7 +102,7 @@ struct DashboardView: View {
             }
             
             // Search Bar
-            Button(action: { showGameSelection = true }) {
+            Button(action: { navigationManager.navigateToGameSelection() }) {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gamingSecondary)
@@ -175,7 +166,7 @@ struct DashboardView: View {
                 Spacer()
                 
                 Button("View All") {
-                    showGameSelection = true
+                    navigationManager.navigateToGameSelection()
                 }
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gamingAccent)
@@ -185,7 +176,7 @@ struct DashboardView: View {
                 HStack(spacing: 16) {
                     ForEach(gameManager.featuredGames) { game in
                         FeaturedGameCard(game: game) {
-                            selectedGame = game
+                            navigationManager.navigateToChat(game: game)
                         }
                     }
                 }
@@ -214,13 +205,13 @@ struct DashboardView: View {
             
             VStack(spacing: 12) {
                 ForEach(Array(recentConversationsByGame.prefix(3)), id: \.key) { gameId, messages in
-                    if let game = gameManager.games.first(where: { $0.gameId == gameId }) {
+                    if let game = gameManager.games.first(where: { $0.game_id == gameId }) {
                         ConversationPreviewCard(
                             game: game,
                             messageCount: messages.count,
                             lastMessage: messages.last
                         ) {
-                            selectedGame = game
+                            navigationManager.navigateToChat(game: game)
                         }
                     }
                 }
@@ -252,7 +243,7 @@ struct DashboardView: View {
                     subtitle: "Choose a game and start asking questions",
                     color: .gamingAccent
                 ) {
-                    showGameSelection = true
+                    navigationManager.navigateToGameSelection()
                 }
                 
                 QuickActionButton(
@@ -261,7 +252,7 @@ struct DashboardView: View {
                     subtitle: "Explore all available tabletop games",
                     color: .gamingSuccess
                 ) {
-                    showGameSelection = true
+                    navigationManager.navigateToGameSelection()
                 }
                 
                 QuickActionButton(
@@ -321,7 +312,7 @@ struct FeaturedGameCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(game.gameId == "chess" ? "♟️" : "🎲")
+                    Text(game.game_id == "chess" ? "♟️" : "🎲")
                         .font(.system(size: 32))
                     
                     Spacer()
@@ -347,7 +338,7 @@ struct FeaturedGameCard: View {
                         .font(.system(size: 10))
                         .foregroundColor(.gamingSecondary)
                     
-                    Text("\(game.minPlayers)-\(game.maxPlayers)")
+                    Text("\(game.min_players)-\(game.max_players)")
                         .font(.system(size: 10))
                         .foregroundColor(.gamingSecondary)
                     
@@ -357,7 +348,7 @@ struct FeaturedGameCard: View {
                         .font(.system(size: 10))
                         .foregroundColor(.gamingSecondary)
                     
-                    Text("\(game.ruleCount)")
+                    Text("\(game.rule_count)")
                         .font(.system(size: 10))
                         .foregroundColor(.gamingSecondary)
                 }
@@ -407,7 +398,7 @@ struct ConversationPreviewCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Text(game.gameId == "chess" ? "♟️" : "🎲")
+                Text(game.game_id == "chess" ? "♟️" : "🎲")
                     .font(.system(size: 24))
                 
                 VStack(alignment: .leading, spacing: 4) {

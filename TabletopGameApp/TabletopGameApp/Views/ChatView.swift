@@ -11,8 +11,8 @@ struct ChatView: View {
     let game: Game
     @StateObject private var conversationManager = ConversationManager()
     @EnvironmentObject private var authManager: AuthenticationManager
+    @EnvironmentObject private var navigationManager: NavigationManager
     @State private var messageText = ""
-    @State private var showGameSelection = false
     
     var body: some View {
         NavigationView {
@@ -37,11 +37,7 @@ struct ChatView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .preferredColorScheme(.dark)
         .onAppear {
-            conversationManager.setCurrentGame(game.gameId)
-        }
-        .sheet(isPresented: $showGameSelection) {
-            GameSelectionView()
-                .environmentObject(authManager)
+            conversationManager.setCurrentGame(game.game_id)
         }
     }
     
@@ -52,7 +48,7 @@ struct ChatView: View {
             // Left side - Navigation and Game Info
             HStack(spacing: 12) {
                 Button("Dashboard") {
-                    // Navigate back to dashboard
+                    navigationManager.navigateToDashboard()
                 }
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gamingAccent)
@@ -62,7 +58,7 @@ struct ChatView: View {
                     .frame(width: 1, height: 24)
                 
                 HStack(spacing: 8) {
-                    Text(game.gameId == "chess" ? "♟️" : "🎲")
+                    Text(game.game_id == "chess" ? "♟️" : "🎲")
                         .font(.system(size: 20))
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -82,7 +78,7 @@ struct ChatView: View {
             // Right side - Actions and User
             HStack(spacing: 12) {
                 Button("Switch Game") {
-                    showGameSelection = true
+                    navigationManager.navigateToGameSelection()
                 }
                 .font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, 12)
@@ -166,7 +162,7 @@ struct ChatView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .onChange(of: conversationManager.currentGameMessages.count) { _ in
+            .onChange(of: conversationManager.currentGameMessages.count) {
                 if let lastMessage = conversationManager.currentGameMessages.last {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
@@ -178,7 +174,7 @@ struct ChatView: View {
     
     private var welcomeMessage: some View {
         VStack(spacing: 16) {
-            Text(game.gameId == "chess" ? "♟️" : "🎲")
+            Text(game.game_id == "chess" ? "♟️" : "🎲")
                 .font(.system(size: 48))
             
             Text("Welcome to \(game.name) Assistant!")
@@ -202,7 +198,7 @@ struct ChatView: View {
                         messageText = question
                         sendMessage()
                     }) {
-                        Text(""\(question)"")
+                        Text("\"\(question)\"")
                             .font(.system(size: 14))
                             .foregroundColor(.gamingAccent)
                             .padding(.horizontal, 16)
@@ -220,7 +216,7 @@ struct ChatView: View {
     }
     
     private var sampleQuestions: [String] {
-        switch game.gameId {
+        switch game.game_id {
         case "chess":
             return [
                 "How do pawns move?",
@@ -313,23 +309,24 @@ struct ChatView: View {
         messageText = ""
         
         Task {
-            await conversationManager.sendMessage(content: message, gameId: game.gameId)
+            await conversationManager.sendMessage(content: message, gameId: game.game_id)
         }
     }
 }
 
 #Preview {
     let sampleGame = Game(
-        gameId: "chess",
+        game_id: "chess",
         name: "Chess",
         description: "The classic strategy board game",
         complexity: "medium",
-        minPlayers: 2,
-        maxPlayers: 2,
-        ruleCount: 15,
+        min_players: 2,
+        max_players: 2,
+        rule_count: 15,
+        publisher: "FIDE",
         categories: ["strategy", "board"],
-        aiTags: ["classic", "strategy"],
-        createdAt: Date()
+        ai_tags: ["classic", "strategy"],
+        created_at: Date()
     )
     
     ChatView(game: sampleGame)

@@ -66,8 +66,8 @@ class GameManager: ObservableObject {
         return games.filter { game in
             game.name.localizedCaseInsensitiveContains(searchText) ||
             game.description.localizedCaseInsensitiveContains(searchText) ||
-            game.categories.contains { $0.localizedCaseInsensitiveContains(searchText) } ||
-            game.aiTags.contains { $0.localizedCaseInsensitiveContains(searchText) }
+            game.safeCategories.contains { $0.localizedCaseInsensitiveContains(searchText) } ||
+            game.safeAiTags.contains { $0.localizedCaseInsensitiveContains(searchText) }
         }
     }
 }

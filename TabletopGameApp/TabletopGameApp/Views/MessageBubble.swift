@@ -266,16 +266,17 @@ struct SourcesView: View {
 
 #Preview {
     let sampleGame = Game(
-        gameId: "chess",
+        game_id: "chess",
         name: "Chess",
         description: "Classic strategy game",
         complexity: "medium",
-        minPlayers: 2,
-        maxPlayers: 2,
-        ruleCount: 15,
+        min_players: 2,
+        max_players: 2,
+        rule_count: 15,
+        publisher: nil,
         categories: ["strategy"],
-        aiTags: ["classic"],
-        createdAt: Date()
+        ai_tags: ["classic"],
+        created_at: Date()
     )
     
     let sampleMessage = ChatMessage(

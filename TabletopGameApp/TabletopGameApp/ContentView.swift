@@ -7,15 +7,28 @@
 
 import SwiftUI
 
+enum AppRoute: Hashable {
+    case dashboard
+    case gameSelection
+    case chat(game: Game)
+}
+
 struct ContentView: View {
+    @StateObject private var authManager = AuthenticationManager()
+    @State private var navigationPath = NavigationPath()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if authManager.isAuthenticated {
+                DashboardView()
+                    .environmentObject(authManager)
+            } else {
+                LoginView()
+                    .environmentObject(authManager)
+            }
         }
-        .padding()
+        .preferredColorScheme(.dark)
+        .animation(.easeInOut, value: authManager.isAuthenticated)
     }
 }
 

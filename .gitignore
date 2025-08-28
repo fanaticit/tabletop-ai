@@ -12,3 +12,7 @@ tabletop-rules-api/app/services/__pycache__/
 tabletop-rules-api/rules_data/.DS_Store
 
 .DS_Store
+
+TabletopGameApp/TabletopGameApp.xcodeproj/project.xcworkspace/xcuserdata/brian.murdoch.xcuserdatad/UserInterfaceState.xcuserstate
+
+*.xcuserstate

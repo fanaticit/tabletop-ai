@@ -1,13 +1,15 @@
 # 🎲 Tabletop Rules API - FastAPI Backend
 
-A modern AI-powered FastAPI backend for tabletop game rules management with intelligent query capabilities.
+A modern **dual AI-powered** FastAPI backend for tabletop game rules management with intelligent query capabilities. Supports both **OpenAI GPT-4o-mini** and **Anthropic Claude 3.5 Sonnet** with seamless provider switching.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.9+
 - MongoDB Atlas account
-- OpenAI API key (optional, for AI features)
+- **AI Provider API Keys** (configure one or both):
+  - OpenAI API key (for GPT-4o-mini)
+  - Anthropic API key (for Claude 3.5 Sonnet)
 
 ### Installation
 ```bash
@@ -27,12 +29,28 @@ cp .env.example .env
 ```
 
 ### Environment Configuration
-Create a `.env` file with:
+Create a `.env` file with dual AI provider support:
 ```bash
+# Database Configuration
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 DATABASE_NAME=tabletop_rules
-OPENAI_API_KEY=sk-your-openai-key-here
-SECRET_KEY=your-jwt-secret-key-here
+
+# JWT Authentication
+SECRET_KEY=your-very-secure-secret-key-change-this-in-production
+
+# AI Provider Configuration - Configure one or both
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+
+# Anthropic Configuration  
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# Default AI provider ("openai" or "anthropic")
+DEFAULT_AI_PROVIDER=openai
+
+# Environment
 ENVIRONMENT=development
 ```
 
@@ -50,11 +68,14 @@ Interactive API docs: `http://localhost:8000/docs`
 
 ## 🎯 Core Features
 
-### ✅ AI-Powered Rule Queries
-- GPT-4o-mini integration for intelligent responses
+### ⭐ **Dual AI-Powered Rule Queries**
+- **OpenAI GPT-4o-mini** integration ($0.15/$0.60 per 1M tokens)
+- **Anthropic Claude 3.5 Sonnet** integration ($3.00/$15.00 per 1M tokens)
+- **Provider switching** - Choose your preferred AI or compare both
+- **Side-by-side comparison** - Test both providers simultaneously
 - Context-aware rule scoring and retrieval
-- Fallback system for AI unavailability
-- Cost monitoring and token tracking
+- Intelligent fallback system for AI unavailability
+- Comprehensive cost monitoring and token tracking
 
 ### ✅ Content Management
 - Markdown file processing with frontmatter
@@ -120,7 +141,8 @@ POST /token                    # Get JWT token
 GET  /health                   # Health check
 GET  /api/games/               # List games
 GET  /api/games/{game_id}      # Game details
-POST /api/chat/query           # AI rule queries
+POST /api/chat/query           # AI rule queries (uses default provider)
+POST /api/chat/query/enhanced  # Enhanced queries with provider selection
 ```
 
 ### Admin Endpoints (Requires Authentication)
@@ -142,6 +164,78 @@ POST   /api/admin/batch/upload               # Batch upload
 # Debug
 POST   /api/admin/debug/parse-markdown       # Parse without storing
 ```
+
+## 🤖 Dual AI Provider System
+
+### AI Provider Configuration
+
+The backend supports both OpenAI and Anthropic simultaneously:
+
+**OpenAI GPT-4o-mini:**
+- **Cost**: $0.15 input / $0.60 output per 1M tokens
+- **Speed**: ~1-2 seconds response time
+- **Best for**: Cost-effective queries, quick responses
+
+**Anthropic Claude 3.5 Sonnet:**
+- **Cost**: $3.00 input / $15.00 output per 1M tokens
+- **Speed**: ~2-3 seconds response time  
+- **Best for**: Complex reasoning, detailed explanations
+
+### AI Endpoint Usage
+
+#### Standard Query (Uses Default Provider)
+```bash
+curl -X POST "http://localhost:8000/api/chat/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do pawns move?",
+    "game_system": "chess"
+  }'
+```
+
+#### Enhanced Query with Provider Selection
+```bash
+curl -X POST "http://localhost:8000/api/chat/query/enhanced" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do pawns move?",
+    "game_system": "chess",
+    "ai_provider": "anthropic"
+  }'
+```
+
+#### Side-by-Side Provider Comparison
+```bash
+curl -X POST "http://localhost:8000/api/chat/query/enhanced" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is checkmate?",
+    "game_system": "chess",
+    "compare_providers": true
+  }'
+```
+
+### AI Monitoring Endpoints
+```bash
+GET  /api/chat/ai-usage           # Combined usage statistics
+GET  /api/chat/ai-test            # Test legacy OpenAI service
+GET  /api/chat/ai-test/multi      # Test both AI providers
+GET  /api/chat/ai-test/multi?provider=anthropic  # Test specific provider
+```
+
+### Testing AI Integration
+
+Run the included test script to verify both providers:
+```bash
+# Test both AI providers with sample queries
+python test_dual_ai.py
+```
+
+This script will:
+- Test connections to both providers
+- Compare response quality side-by-side
+- Show performance metrics and costs
+- Demonstrate all API usage patterns
 
 ## 📄 Markdown File Format
 
@@ -196,10 +290,27 @@ curl -X POST "http://localhost:8000/api/admin/upload/markdown-simple" \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@rules_data/chess_rules.md"
 
-# Query rules
+# Query rules (standard endpoint)
 curl -X POST "http://localhost:8000/api/chat/query" \
   -H "Content-Type: application/json" \
   -d '{"query": "How do pawns move?", "game_system": "chess"}'
+
+# Query with specific AI provider
+curl -X POST "http://localhost:8000/api/chat/query/enhanced" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How do pawns move?", "game_system": "chess", "ai_provider": "anthropic"}'
+```
+
+### Dual AI Testing Script
+```bash
+# Run comprehensive dual AI provider testing
+python test_dual_ai.py
+
+# This will:
+# - Test connections to both AI providers
+# - Compare response quality side-by-side  
+# - Show performance metrics and costs
+# - Demonstrate all API usage patterns
 ```
 
 ## 🗃️ Database Schema
@@ -253,15 +364,16 @@ tabletop-rules-api/
 ├── setup_cli.py              # CLI setup script
 ├── CLI_README.md             # CLI documentation
 ├── app/
-│   ├── config.py             # Settings management
+│   ├── config.py             # Settings management (dual AI support)
 │   ├── database.py           # MongoDB connection
 │   ├── models.py             # Pydantic models
 │   ├── routes/
 │   │   ├── admin.py          # Admin endpoints
-│   │   ├── chat.py           # AI chat endpoints
+│   │   ├── chat.py           # AI chat endpoints (dual AI support)
 │   │   └── games.py          # Game endpoints
 │   └── services/
-│       ├── ai_chat_service.py # GPT integration
+│       ├── ai_chat_service.py # Legacy OpenAI GPT integration
+│       ├── multi_ai_service.py # Dual AI provider service
 │       ├── auth_service.py    # JWT authentication
 │       └── upload_service.py  # File processing
 ├── rules_data/               # Sample game files
@@ -278,8 +390,13 @@ tabletop-rules-api/
 ### Environment Variables
 - `MONGODB_URI`: MongoDB connection string
 - `DATABASE_NAME`: Database name (default: `tabletop_rules`)
-- `OPENAI_API_KEY`: OpenAI API key for AI features
 - `SECRET_KEY`: JWT signing secret
+- **AI Provider Settings:**
+  - `OPENAI_API_KEY`: OpenAI API key for GPT-4o-mini
+  - `ANTHROPIC_API_KEY`: Anthropic API key for Claude 3.5 Sonnet
+  - `DEFAULT_AI_PROVIDER`: Default provider (`openai` or `anthropic`)
+  - `OPENAI_MODEL`: OpenAI model name (default: `gpt-4o-mini`)
+  - `ANTHROPIC_MODEL`: Anthropic model name (default: `claude-3-5-sonnet-20241022`)
 - `ENVIRONMENT`: `development` or `production`
 
 ## 🚀 Deployment
@@ -321,7 +438,16 @@ curl http://localhost:8000/health
 ### Logs
 - Application logs via Python logging
 - MongoDB Atlas monitoring
-- Custom metrics for AI usage and costs
+- Custom metrics for AI usage and costs (both providers)
+
+### AI Usage Monitoring
+```bash
+# Get combined usage statistics
+curl http://localhost:8000/api/chat/ai-usage
+
+# Test both AI providers
+curl http://localhost:8000/api/chat/ai-test/multi
+```
 
 ## 🤝 Contributing
 

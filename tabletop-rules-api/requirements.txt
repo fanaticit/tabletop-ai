@@ -18,8 +18,9 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.0
 
-# AI and Markdown processing (compatible versions)
+# AI integration (compatible versions)
 openai==1.40.0
+# Note: Anthropic API uses httpx (already included above) - no separate package needed
 
 # Markdown Processing
 python-frontmatter==1.0.0

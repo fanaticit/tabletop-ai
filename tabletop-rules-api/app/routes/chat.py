@@ -11,6 +11,7 @@ from app.models import (
     ContentType
 )
 from app.services.ai_chat_service import ai_chat_service
+from app.services.multi_ai_service import multi_ai_service
 from pydantic import BaseModel
 from typing import List, Optional
 import re
@@ -449,6 +450,13 @@ class ChatQuery(BaseModel):
     game_system: str
     conversation_id: Optional[str] = None
 
+class EnhancedChatQuery(BaseModel):
+    query: str
+    game_system: str
+    ai_provider: Optional[str] = None  # "openai", "anthropic", or None for default
+    compare_providers: bool = False
+    conversation_id: Optional[str] = None
+
 @router.post("/query")
 async def query_rules(
     chat_query: ChatQuery,
@@ -516,28 +524,140 @@ async def query_rules(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
+@router.post("/query/enhanced")
+async def enhanced_query_rules(
+    chat_query: EnhancedChatQuery,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Enhanced query with AI provider selection and comparison capabilities."""
+    try:
+        query_text = chat_query.query.lower()
+        game_id = chat_query.game_system.lower()
+        
+        # Get all rules for the game first
+        all_rules = await db.content_chunks.find({
+            "game_id": game_id
+        }).to_list(length=50)
+        
+        if not all_rules:
+            return create_structured_no_results_response(chat_query.query, game_id)
+        
+        # Improved search with relevance scoring
+        scored_rules = score_rules_for_query(all_rules, query_text)
+        
+        # Take top 5 most relevant rules
+        rules = scored_rules[:5]
+        
+        if not rules:
+            return create_structured_no_results_response(chat_query.query, game_id)
+        
+        # Use the multi-AI service for enhanced capabilities
+        try:
+            ai_result = await multi_ai_service.generate_rule_response(
+                query=chat_query.query,
+                game_id=game_id, 
+                rules_context=rules,
+                provider=chat_query.ai_provider,
+                compare_providers=chat_query.compare_providers
+            )
+            
+            if chat_query.compare_providers:
+                # Return comparison response
+                return {
+                    "query": chat_query.query,
+                    "game_system": game_id,
+                    "comparison_mode": True,
+                    "results": ai_result.get("comparison", {}),
+                    "search_method": "multi_ai_comparison",
+                    "rules_used": len(rules)
+                }
+            
+            elif ai_result.get("success"):
+                # Create structured response from AI output
+                structured_response = create_ai_structured_response(
+                    ai_result, chat_query.query, game_id, rules
+                )
+                
+                provider_used = ai_result.get("provider", "unknown")
+                model_used = ai_result.get("model", "unknown")
+                
+                return StructuredChatResponse(
+                    query=chat_query.query,
+                    game_system=game_id,
+                    structured_response=structured_response,
+                    search_method=f"ai_powered_{provider_used}_{model_used}"
+                )
+            else:
+                # AI failed, use fallback
+                print(f"Multi-AI service failed: {ai_result.get('error', 'Unknown error')}, using fallback")
+                
+        except Exception as e:
+            print(f"Multi-AI service exception: {e}, using fallback")
+        
+        # Fallback to existing template-based response
+        structured_response = create_structured_gaming_response(rules, chat_query.query, game_id)
+        
+        return StructuredChatResponse(
+            query=chat_query.query,
+            game_system=game_id,
+            structured_response=structured_response,
+            search_method="enhanced_scoring_fallback"
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Enhanced query failed: {str(e)}")
+
 @router.get("/ai-usage")
 async def get_ai_usage():
-    """Get AI usage statistics for monitoring"""
+    """Get AI usage statistics for monitoring (supports multiple providers)"""
     try:
-        usage_summary = ai_chat_service.get_usage_summary()
+        # Get usage from both services
+        legacy_usage = ai_chat_service.get_usage_summary()
+        multi_usage = multi_ai_service.get_usage_summary()
+        
         return {
-            "ai_service": "openai_gpt4o_mini",
-            "usage": usage_summary,
-            "status": "active"
+            "legacy_service": {
+                "ai_service": "openai_gpt4o_mini",
+                "usage": legacy_usage,
+                "status": "active"
+            },
+            "multi_ai_service": {
+                "providers": ["openai", "anthropic"],
+                "usage": multi_usage,
+                "status": "active",
+                "default_provider": multi_ai_service.settings.default_ai_provider if hasattr(multi_ai_service, 'settings') else "openai"
+            },
+            "combined_requests": legacy_usage.get("total_requests", 0) + multi_usage.get("total_requests", 0),
+            "combined_cost": round(legacy_usage.get("total_cost", 0.0) + multi_usage.get("total_cost", 0.0), 6)
         }
     except Exception as e:
         return {
-            "ai_service": "openai_gpt4o_mini", 
             "status": "error",
             "error": str(e)
         }
 
 @router.get("/ai-test")
 async def test_ai_connection():
-    """Test AI service connection"""
+    """Test AI service connections (legacy service)"""
     try:
         test_result = await ai_chat_service.test_connection()
+        return test_result
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+@router.get("/ai-test/multi")
+async def test_multi_ai_connection(provider: Optional[str] = None):
+    """Test multi-AI service connections"""
+    try:
+        # Validate provider parameter
+        if provider and provider not in ["openai", "anthropic"]:
+            raise HTTPException(status_code=400, detail="Provider must be 'openai' or 'anthropic'")
+        
+        test_result = await multi_ai_service.test_connection(provider=provider)
         return test_result
     except Exception as e:
         return {

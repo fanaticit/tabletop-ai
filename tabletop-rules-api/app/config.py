@@ -6,7 +6,16 @@ import os
 class Settings(BaseSettings):
     mongodb_uri: str
     database_name: str = "tabletop_rules"
-    openai_api_key: Optional[str] = None  # Optional for basic testing
+    
+    # AI Provider Settings - can use either or both
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    default_ai_provider: str = "openai"  # "openai" or "anthropic"
+    
+    # Provider-specific settings
+    openai_model: str = "gpt-4o-mini"
+    anthropic_model: str = "claude-3-5-sonnet-20241022"
+    
     environment: str = "development"
     secret_key: str = "your-secret-key-change-this-in-production"  # For JWT tokens
     
